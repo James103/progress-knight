@@ -1,0 +1,59 @@
+#energyGridDisplay {
+    color: var(--body-font-color);
+
+    .ticks {
+        height: 1rem;
+    }
+
+    .tick {
+        width: 1px;
+        height: 50%;
+        background-color: currentColor;
+
+        &:nth-child(5n+1),
+        .large {
+            height: 100%;
+        }
+    }
+
+    .icon {
+        height: 18px;
+        filter: invert(1);
+    }
+}
+
+.grid-strength-bar {
+    height: 30px;
+    line-height: 30px;
+}
+
+#gridStrength {
+    .gridLoad,
+    .gridStrength {
+        text-shadow: 1px 1px var(--ps-dark), 1px 1px 3px var(--ps-dark);
+    }
+
+    .grid-strength-box {
+        height: 100%;
+        background-color: var(--attr-grid-strength-color);
+
+        &.in-use {
+            background-color: var(--attr-grid-load-color);
+        }
+    }
+}
+
+.energy-bar {
+    height: 18px;
+    line-height: 18px;
+    margin-top: 3px;
+
+    .progress-text {
+        line-height: inherit;
+        white-space: nowrap;
+    }
+}
+
+.energy-label {
+    background-color: var(--ps-passive);
+}

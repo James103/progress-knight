@@ -1,1158 +1,2489 @@
-var gameData = {
-    taskData: {},
-    itemData: {},
+'use strict';
 
-    coins: 0,
-    days: 365 * 14,
-    evil: 0,
-    paused: false,
-    timeWarpingEnabled: true,
+/**
+ * @type {GameData}
+ */
+let gameData;
 
-    rebirthOneCount: 0,
-    rebirthTwoCount: 0,
+/**
+ * @type {number}
+ */
+let updateIntervalID = 0;
 
-    currentJob: null,
-    currentSkill: null,
-    currentProperty: null,
-    currentMisc: null,
-}
+/**
+ *
+ * @type {
+ * {
+ *   element: HTMLElement,
+ *   effectType: EffectType,
+ *   getEffect: function(EffectType): number,
+ *   getEffects: function(): EffectDefinition[],
+ *   isActive: function(): boolean
+ * }[]
+ * }
+ */
+const attributeBalanceEntries = [];
 
-var tempData = {}
+/**
+ *
+ * @type {{element: HTMLElement, taskOrItem: EffectsHolder, isActive: function(): boolean}[]}
+ */
+const gridLoadBalanceEntries = [];
 
-var skillWithLowestMaxXp = null
+/**
+ *
+ * @type {Object<HTMLElement>}
+ */
+const tabButtons = {
+    modules: document.getElementById('modulesTabButton'),
+    location: document.getElementById('locationTabButton'),
+    battles: document.getElementById('battleTabButton'),
+    galacticSecrets: document.getElementById('galacticSecretsTabButton'),
+    attributes: document.getElementById('attributesTabButton'),
+    settings: document.getElementById('settingsTabButton'),
+};
 
-const autoPromoteElement = document.getElementById("autoPromote")
-const autoLearnElement = document.getElementById("autoLearn")
-
-const updateSpeed = 20
-
-const baseLifespan = 365 * 70
-
-const baseGameSpeed = 4
-
-const permanentUnlocks = ["Scheduling", "Shop", "Automation", "Quick task display"]
-
-const jobBaseData = {
-    "Beggar": {name: "Beggar", maxXp: 50, income: 5},
-    "Farmer": {name: "Farmer", maxXp: 100, income: 9},
-    "Fisherman": {name: "Fisherman", maxXp: 200, income: 15},
-    "Miner": {name: "Miner", maxXp: 400, income: 40},
-    "Blacksmith": {name: "Blacksmith", maxXp: 800, income: 80},
-    "Merchant": {name: "Merchant", maxXp: 1600, income: 150},
-
-    "Squire": {name: "Squire", maxXp: 100, income: 5},
-    "Footman": {name: "Footman", maxXp: 1000, income: 50},
-    "Veteran footman": {name: "Veteran footman", maxXp: 10000, income: 120},
-    "Knight": {name: "Knight", maxXp: 100000, income: 300},
-    "Veteran knight": {name: "Veteran knight", maxXp: 1000000, income: 1000},
-    "Elite knight": {name: "Elite knight", maxXp: 7500000, income: 3000},
-    "Holy knight": {name: "Holy knight", maxXp: 40000000, income: 15000},
-    "Legendary knight": {name: "Legendary knight", maxXp: 150000000, income: 50000},
-
-    "Student": {name: "Student", maxXp: 100000, income: 100},
-    "Apprentice mage": {name: "Apprentice mage", maxXp: 1000000, income: 1000},
-    "Mage": {name: "Mage", maxXp: 10000000, income: 7500},
-    "Wizard": {name: "Wizard", maxXp: 100000000, income: 50000},
-    "Master wizard": {name: "Master wizard", maxXp: 10000000000, income: 250000},
-    "Chairman": {name: "Chairman", maxXp: 1000000000000, income: 1000000},
-}
-
-const skillBaseData = {
-    "Concentration": {name: "Concentration", maxXp: 100, effect: 0.01, description: "Skill xp"},
-    "Productivity": {name: "Productivity", maxXp: 100, effect: 0.01, description: "Job xp"},
-    "Bargaining": {name: "Bargaining", maxXp: 100, effect: -0.01, description: "Expenses"},
-    "Meditation": {name: "Meditation", maxXp: 100, effect: 0.01, description: "Happiness"},
-
-    "Strength": {name: "Strength", maxXp: 100, effect: 0.01, description: "Military pay"},
-    "Battle tactics": {name: "Battle tactics", maxXp: 100, effect: 0.01, description: "Military xp"},
-    "Muscle memory": {name: "Muscle memory", maxXp: 100, effect: 0.01, description: "Strength xp"},
-
-    "Mana control": {name: "Mana control", maxXp: 100, effect: 0.01, description: "T.A.A. xp"},
-    "Immortality": {name: "Immortality", maxXp: 100, effect: 0.01, description: "Longer lifespan"},
-    "Time warping": {name: "Time warping", maxXp: 100, effect: 0.01, description: "Gamespeed"},
-    "Super immortality": {name: "Super immortality", maxXp: 100, effect: 0.01, description: "Longer lifespan"},
-
-    "Dark influence": {name: "Dark influence", maxXp: 100, effect: 0.01, description: "All xp"},
-    "Evil control": {name: "Evil control", maxXp: 100, effect: 0.01, description: "Evil gain"},
-    "Intimidation": {name: "Intimidation", maxXp: 100, effect: -0.01, description: "Expenses"},
-    "Demon training": {name: "Demon training", maxXp: 100, effect: 0.01, description: "All xp"},
-    "Blood meditation": {name: "Blood meditation", maxXp: 100, effect: 0.01, description: "Evil gain"},
-    "Demon's wealth": {name: "Demon's wealth", maxXp: 100, effect: 0.002, description: "Job pay"},
-    
-}
-
-const itemBaseData = {
-    "Homeless": {name: "Homeless", expense: 0, effect: 1},
-    "Tent": {name: "Tent", expense: 15, effect: 1.4},
-    "Wooden hut": {name: "Wooden hut", expense: 100, effect: 2},
-    "Cottage": {name: "Cottage", expense: 750, effect: 3.5},
-    "House": {name: "House", expense: 3000, effect: 6},
-    "Large house": {name: "Large house", expense: 25000, effect: 12},
-    "Small palace": {name: "Small palace", expense: 300000, effect: 25},
-    "Grand palace": {name: "Grand palace", expense: 5000000, effect: 60},
-
-    "Book": {name: "Book", expense: 10, effect: 1.5, description: "Skill xp"},
-    "Dumbbells": {name: "Dumbbells", expense: 50, effect: 1.5, description: "Strength xp"},
-    "Personal squire": {name: "Personal squire", expense: 200, effect: 2, description: "Job xp"},
-    "Steel longsword": {name: "Steel longsword", expense: 1000, effect: 2, description: "Military xp"},
-    "Butler": {name: "Butler", expense: 7500, effect: 1.5, description: "Happiness"},
-    "Sapphire charm": {name: "Sapphire charm", expense: 50000, effect: 3, description: "Magic xp"},
-    "Study desk": {name: "Study desk", expense: 1000000, effect: 2, description: "Skill xp"},
-    "Library": {name: "Library", expense: 10000000, effect: 1.5, description: "Skill xp"},
-}
-
-const jobCategories = {
-    "Common work": ["Beggar", "Farmer", "Fisherman", "Miner", "Blacksmith", "Merchant"],
-    "Military" : ["Squire", "Footman", "Veteran footman", "Knight", "Veteran knight", "Elite knight", "Holy knight", "Legendary knight"],
-    "The Arcane Association" : ["Student", "Apprentice mage", "Mage", "Wizard", "Master wizard", "Chairman"]
-}
-
-const skillCategories = {
-    "Fundamentals": ["Concentration", "Productivity", "Bargaining", "Meditation"],
-    "Combat": ["Strength", "Battle tactics", "Muscle memory"],
-    "Magic": ["Mana control", "Immortality", "Time warping", "Super immortality"],
-    "Dark magic": ["Dark influence", "Evil control", "Intimidation", "Demon training", "Blood meditation", "Demon's wealth"]
-}
-
-const itemCategories = {
-    "Properties": ["Homeless", "Tent", "Wooden hut", "Cottage", "House", "Large house", "Small palace", "Grand palace"],
-    "Misc": ["Book", "Dumbbells", "Personal squire", "Steel longsword", "Butler", "Sapphire charm", "Study desk", "Library"]
-}
-
-const headerRowColors = {
-    "Common work": "#55a630",
-    "Military": "#e63946",
-    "The Arcane Association": "#C71585",
-    "Fundamentals": "#4a4e69",
-    "Combat": "#ff704d",
-    "Magic": "#875F9A",
-    "Dark magic": "#73000f",
-    "Properties": "#219ebc",
-    "Misc": "#b56576",
-}
-
-const tooltips = {
-    "Beggar": "Struggle day and night for a couple of copper coins. It feels like you are at the brink of death each day.",
-    "Farmer": "Plow the fields and grow the crops. It's not much but it's honest work.",
-    "Fisherman": "Reel in various fish and sell them for a handful of coins. A relaxing but still a poor paying job.",
-    "Miner": "Delve into dangerous caverns and mine valuable ores. The pay is quite meager compared to the risk involved.",
-    "Blacksmith": "Smelt ores and carefully forge weapons for the military. A respectable and OK paying commoner job.",
-    "Merchant": "Travel from town to town, bartering fine goods. The job pays decently well and is a lot less manually-intensive.",
-
-    "Squire": "Carry around your knight's shield and sword along the battlefield. Very meager pay but the work experience is quite valuable.",
-    "Footman": "Put down your life to battle with enemy soldiers. A courageous, respectable job but you are still worthless in the grand scheme of things.",
-    "Veteran footman": "More experienced and useful than the average footman, take out the enemy forces in battle with your might. The pay is not that bad.",
-    "Knight": "Slash and pierce through enemy soldiers with ease, while covered in steel from head to toe. A decently paying and very respectable job.",
-    "Veteran knight": "Utilising your unmatched combat ability, slaugher enemies effortlessly. Most footmen in the military would never be able to acquire such a well paying job like this.",
-    "Elite knight": "Obliterate squadrons of enemy soldiers in one go with extraordinary proficiency, while equipped with the finest gear. Such a feared unit on the battlefield is paid extremely well.",
-    "Holy knight": "Collapse entire armies in mere seconds with your magically imbued blade. The handful of elite knights who attain this level of power are showered with coins.",
-    "Legendary knight": "Feared worldwide, obliterate entire nations in a blink of an eye. Roughly every century, only one holy knight is worthy of receiving such an esteemed title.",
-
-    "Student": "Study the theory of mana and practice basic spells. There is minor pay to cover living costs, however, this is a necessary stage in becoming a mage.",
-    "Apprentice mage": "Under the supervision of a mage, perform basic spells against enemies in battle. Generous pay will be provided to cover living costs.",
-    "Mage": "Turn the tides of battle through casting intermediate spells and mentor other apprentices. The pay for this particular job is extremely high.",
-    "Wizard": "Utilise advanced spells to ravage and destroy entire legions of enemy soldiers. Only a small percentage of mages deserve to attain this role and are rewarded with an insanely high pay.",
-    "Master wizard": "Blessed with unparalleled talent, perform unbelievable feats with magic at will. It is said that a master wizard has enough destructive power to wipe an empire off the map.",
-    "Chairman": "Spend your days administrating The Arcane Association and investigate the concepts of true immortality. The chairman receives ludicrous amounts of pay daily.",
-
-    "Concentration": "Improve your learning speed through practising intense concentration activities.",
-    "Productivity": "Learn to procrastinate less at work and receive more job experience per day.",
-    "Bargaining": "Study the tricks of the trade and persuasive skills to lower any type of expense.",
-    "Meditation": "Fill your mind with peace and tranquility to tap into greater happiness from within.",
-
-    "Strength": "Condition your body and strength through harsh training. Stronger individuals are paid more in the military.",
-    "Battle tactics": "Create and revise battle strategies, improving experience gained in the military.",
-    "Muscle memory": "Strengthen your neurons through habit and repetition, improving strength gains throughout the body.",
-
-    "Mana control": "Strengthen your mana channels throughout your body, aiding you in becoming a more powerful magical user.",
-    "Immortality": "Lengthen your lifespan through the means of magic. However, is this truly the immortality you have tried seeking for...?",
-    "Time warping": "Bend space and time through forbidden techniques, resulting in a faster gamespeed.",
-    "Super immortality": "Through harnessing ancient, forbidden techniques, lengthen your lifespan drastically beyond comprehension.",
-
-    "Dark influence": "Encompass yourself with formidable power bestowed upon you by evil, allowing you to pick up and absorb any job or skill with ease.",
-    "Evil control": "Tame the raging and growing evil within you, improving evil gain in-between rebirths.",
-    "Intimidation": "Learn to emit a devilish aura which strikes extreme fear into other merchants, forcing them to give you heavy discounts.",
-    "Demon training": "A mere human body is too feeble and weak to withstand evil. Train with forbidden methods to slowly manifest into a demon, capable of absorbing knowledge rapidly.",
-    "Blood meditation": "Grow and culture the evil within you through the sacrifise of other living beings, drastically increasing evil gain.",
-    "Demon's wealth": "Through the means of dark magic, multiply the raw matter of the coins you receive from your job.",
-
-    "Homeless": "Sleep on the uncomfortable, filthy streets while almost freezing to death every night. It cannot get any worse than this.",
-    "Tent": "A thin sheet of tattered cloth held up by a couple of feeble, wooden sticks. Horrible living conditions but at least you have a roof over your head.",
-    "Wooden hut": "Shabby logs and dirty hay glued together with horse manure. Much more sturdy than a tent, however, the stench isn't very pleasant.",
-    "Cottage": "Structured with a timber frame and a thatched roof. Provides decent living conditions for a fair price.",
-    "House": "A building formed from stone bricks and sturdy timber, which contains a few rooms. Although quite expensive, it is a comfortable abode.",
-    "Large house": "Much larger than a regular house, which boasts even more rooms and multiple floors. The building is quite spacious but comes with a hefty price tag.",
-    "Small palace": "A very rich and meticulously built structure rimmed with fine metals such as silver. Extremely high expenses to maintain for a lavish lifestyle.",
-    "Grand palace": "A grand residence completely composed of gold and silver. Provides the utmost luxurious and comfortable living conditions possible for a ludicrous price.",
-
-    "Book": "A place to write down all your thoughts and discoveries, allowing you to learn a lot more quickly.",
-    "Dumbbells": "Heavy tools used in strenuous exercise to toughen up and accumulate strength even faster than before. ",
-    "Personal squire": "Assists you in completing day to day activities, giving you more time to be productive at work.",
-    "Steel longsword": "A fine blade used to slay enemies even quicker in combat and therefore gain more experience.",
-    "Butler": "Keeps your household clean at all times and also prepares three delicious meals per day, leaving you in a happier, stress-free mood.",
-    "Sapphire charm": "Embedded with a rare sapphire, this charm activates more mana channels within your body, providing a much easier time learning magic.",
-    "Study desk": "A dedicated area which provides many fine stationary and equipment designed for furthering your progress in research.",
-    "Library": "Stores a collection of books, each containing vast amounts of information from basic life skills to complex magic spells.",
-}
-
-const units = ["", "k", "M", "B", "T", "q", "Q", "Sx", "Sp", "Oc"];
-
-const jobTabButton = document.getElementById("jobTabButton")
+let previousSelectedTab = 'modules';
 
 function getBaseLog(x, y) {
     return Math.log(y) / Math.log(x);
 }
-  
-function getBindedTaskEffect(taskName) {
-    var task = gameData.taskData[taskName]
-    return task.getEffect.bind(task)
-}
-
-function getBindedItemEffect(itemName) {
-    var item = gameData.itemData[itemName]
-    return item.getEffect.bind(item)
-}
-
-function addMultipliers() {
-    for (taskName in gameData.taskData) {
-        var task = gameData.taskData[taskName]
-
-        task.xpMultipliers = []
-        if (task instanceof Job) task.incomeMultipliers = []
-
-        task.xpMultipliers.push(task.getMaxLevelMultiplier.bind(task))
-        task.xpMultipliers.push(getHappiness)
-        task.xpMultipliers.push(getBindedTaskEffect("Dark influence"))
-        task.xpMultipliers.push(getBindedTaskEffect("Demon training"))
-
-        if (task instanceof Job) {
-            task.incomeMultipliers.push(task.getLevelMultiplier.bind(task))
-            task.incomeMultipliers.push(getBindedTaskEffect("Demon's wealth"))
-            task.xpMultipliers.push(getBindedTaskEffect("Productivity"))
-            task.xpMultipliers.push(getBindedItemEffect("Personal squire"))    
-        } else if (task instanceof Skill) {
-            task.xpMultipliers.push(getBindedTaskEffect("Concentration"))
-            task.xpMultipliers.push(getBindedItemEffect("Book"))
-            task.xpMultipliers.push(getBindedItemEffect("Study desk"))
-            task.xpMultipliers.push(getBindedItemEffect("Library"))
-        }
-
-        if (jobCategories["Military"].includes(task.name)) {
-            task.incomeMultipliers.push(getBindedTaskEffect("Strength"))
-            task.xpMultipliers.push(getBindedTaskEffect("Battle tactics"))
-            task.xpMultipliers.push(getBindedItemEffect("Steel longsword"))
-        } else if (task.name == "Strength") {
-            task.xpMultipliers.push(getBindedTaskEffect("Muscle memory"))
-            task.xpMultipliers.push(getBindedItemEffect("Dumbbells"))
-        } else if (skillCategories["Magic"].includes(task.name)) {
-            task.xpMultipliers.push(getBindedItemEffect("Sapphire charm"))
-        } else if (jobCategories["The Arcane Association"].includes(task.name)) {
-            task.xpMultipliers.push(getBindedTaskEffect("Mana control"))
-        } else if (skillCategories["Dark magic"].includes(task.name)) {
-            task.xpMultipliers.push(getEvil)
-        }
-    }
-
-    for (itemName in gameData.itemData) {
-        var item = gameData.itemData[itemName]
-        item.expenseMultipliers = []
-        item.expenseMultipliers.push(getBindedTaskEffect("Bargaining"))
-        item.expenseMultipliers.push(getBindedTaskEffect("Intimidation"))
-    }
-}
-
-function setCustomEffects() {
-    var bargaining = gameData.taskData["Bargaining"]
-    bargaining.getEffect = function() {
-        var multiplier = 1 - getBaseLog(7, bargaining.level + 1) / 10
-        if (multiplier < 0.1) {multiplier = 0.1}
-        return multiplier
-    }
-
-    var intimidation = gameData.taskData["Intimidation"]
-    intimidation.getEffect = function() {
-        var multiplier = 1 - getBaseLog(7, intimidation.level + 1) / 10
-        if (multiplier < 0.1) {multiplier = 0.1}
-        return multiplier
-    }
-
-    var timeWarping = gameData.taskData["Time warping"]
-    timeWarping.getEffect = function() {
-        var multiplier = 1 + getBaseLog(13, timeWarping.level + 1) 
-        return multiplier
-    }
-
-    var immortality = gameData.taskData["Immortality"]
-    immortality.getEffect = function() {
-        var multiplier = 1 + getBaseLog(33, immortality.level + 1) 
-        return multiplier
-    }
-}
-
-function getHappiness() {
-    var meditationEffect = getBindedTaskEffect("Meditation")
-    var butlerEffect = getBindedItemEffect("Butler")
-    var happiness = meditationEffect() * butlerEffect() * gameData.currentProperty.getEffect()
-    return happiness
-}
-
-function getEvil() {
-    return gameData.evil
-}
 
 function applyMultipliers(value, multipliers) {
-    var finalMultiplier = 1
-    multipliers.forEach(function(multiplierFunction) {
-        var multiplier = multiplierFunction()
-        finalMultiplier *= multiplier
-    })
-    var finalValue = Math.round(value * finalMultiplier)
-    return finalValue
+    const finalMultiplier = multipliers.reduce((final, multiplierFn) => final * multiplierFn(), 1);
+
+    return Math.round(value * finalMultiplier);
 }
 
 function applySpeed(value) {
-    finalValue = value * getGameSpeed() / updateSpeed
-    return finalValue
+    return value * getGameSpeed() / updateSpeed;
 }
 
-function getEvilGain() {
-    var evilControl = gameData.taskData["Evil control"]
-    var bloodMeditation = gameData.taskData["Blood meditation"]
-    var evil = evilControl.getEffect() * bloodMeditation.getEffect()
-    return evil
+function calculateHeat() {
+    const danger = attributes.danger.getValue();
+    const military = attributes.military.getValue();
+    const rawHeat = Effect.getTotalValue([EffectType.Heat]);
+    const calculatedHeat = Math.max(danger - military, 0) + rawHeat;
+
+    return Math.max(0.1, calculatedHeat);
+}
+
+function populationDelta() {
+    const growth = attributes.growth.getValue();
+    const heat = attributes.heat.getValue();
+    const population = attributes.population.getValue();
+    return (0.1 * growth) - (0.01 * population * heat);
+}
+
+function updatePopulation() {
+    if (!gameData.state.areAttributesUpdated) return;
+
+    const rawDelta = populationDelta();
+    // TODO inertia is not scaled with game speed
+    const inertDelta = populationDeltaInertia * gameData.lastPopulationDelta + (1 - populationDeltaInertia) * rawDelta;
+    gameData.population = Math.max(gameData.population + applySpeed(inertDelta), 1);
+    gameData.lastPopulationDelta = inertDelta;
+
+    if (gameData.state === gameStates.BOSS_FIGHT && Math.round(gameData.population) === 1) {
+        gameData.transitionState(gameStates.DEAD);
+    }
+}
+
+function getPopulationProgressSpeedMultiplier() {
+    // Random ass formula ᕕ( ᐛ )ᕗ
+    // Pop 1 = x1
+    // Pop 10 ~= x3.4
+    // Pop 100 ~= x12
+    // Pop 1000 ~= x40
+    // Pop 10000 ~= x138
+    // Pop 40000 ~= x290
+    return Math.max(1, Math.pow(Math.round(gameData.population), 1 / 1.869));
 }
 
 function getGameSpeed() {
-    var timeWarping = gameData.taskData["Time warping"]
-    var timeWarpingSpeed = gameData.timeWarpingEnabled ? timeWarping.getEffect() : 1
-    var gameSpeed = baseGameSpeed * +!gameData.paused * +isAlive() * timeWarpingSpeed
-    return gameSpeed
+    return baseGameSpeed;
 }
 
-function applyExpenses() {
-    var coins = applySpeed(getExpense())
-    gameData.coins -= coins
-    if (gameData.coins < 0) {    
-        goBankrupt()
+function hideAllTooltips() {
+    for (const tooltipTriggerElement of visibleTooltips) {
+        // noinspection JSUnresolvedReference
+        bootstrap.Tooltip.getInstance(tooltipTriggerElement).hide();
     }
 }
 
-function getExpense() {
-    var expense = 0
-    expense += gameData.currentProperty.getExpense()
-    for (misc of gameData.currentMisc) {
-        expense += misc.getExpense()
+/**
+ *
+ * @param {MouseEvent} event
+ */
+function showCredits(event) {
+    event.preventDefault();
+    setTab('settings');
+    Dom.get().byId('credits').scrollIntoView(true);
+}
+
+/**
+ * @param {string} selectedTab
+ */
+function setTab(selectedTab) {
+    if (tabButtons[selectedTab].classList.contains('hidden')) {
+        // Tab is not available
+        return;
     }
-    return expense
-}
 
-function goBankrupt() {
-    gameData.coins = 0
-    gameData.currentProperty = gameData.itemData["Homeless"]
-    gameData.currentMisc = []
-}
-
-function setTab(element, selectedTab) {
-
-    var tabs = Array.prototype.slice.call(document.getElementsByClassName("tab"))
-    tabs.forEach(function(tab) {
-        tab.style.display = "none"
-    })
-    document.getElementById(selectedTab).style.display = "block"
-
-    var tabButtons = document.getElementsByClassName("tabButton")
-    for (tabButton of tabButtons) {
-        tabButton.classList.remove("w3-blue-gray")
-    }
-    element.classList.add("w3-blue-gray")
-}
-
-function setPause() {
-    gameData.paused = !gameData.paused
-}
-
-function setTimeWarping() {
-    gameData.timeWarpingEnabled = !gameData.timeWarpingEnabled
-}
-
-function setTask(taskName) {
-    var task = gameData.taskData[taskName]
-    task instanceof Job ? gameData.currentJob = task : gameData.currentSkill = task
-}
-
-function setProperty(propertyName) {
-    var property = gameData.itemData[propertyName]
-    gameData.currentProperty = property
-}
-
-function setMisc(miscName) {
-    var misc = gameData.itemData[miscName]
-    if (gameData.currentMisc.includes(misc)) {
-        for (i = 0; i < gameData.currentMisc.length; i++) {
-            if (gameData.currentMisc[i] == misc) {
-                gameData.currentMisc.splice(i, 1)
-            }
-        }
+    if (selectedTab === 'settings') {
+        forcePause();
     } else {
-        gameData.currentMisc.push(misc)
-    }
-}
-
-function createData(data, baseData) {
-    for (key in baseData) {
-        var entity = baseData[key]
-        createEntity(data, entity)
-    }
-}
-
-function createEntity(data, entity) {
-    if ("income" in entity) {data[entity.name] = new Job(entity)}
-    else if ("maxXp" in entity) {data[entity.name] = new Skill(entity)}
-    else {data[entity.name] = new Item(entity)}
-    data[entity.name].id = "row " + entity.name
-}
-
-function createRequiredRow(categoryName) {
-    var requiredRow = document.getElementsByClassName("requiredRowTemplate")[0].content.firstElementChild.cloneNode(true)
-    requiredRow.classList.add("requiredRow")
-    requiredRow.classList.add(removeSpaces(categoryName))
-    requiredRow.id = categoryName
-    return requiredRow
-}
-
-function createHeaderRow(templates, categoryType, categoryName) {
-    var headerRow = templates.headerRow.content.firstElementChild.cloneNode(true)
-    headerRow.getElementsByClassName("category")[0].textContent = categoryName
-    if (categoryType != itemCategories) {
-        headerRow.getElementsByClassName("valueType")[0].textContent = categoryType == jobCategories ? "Income/day" : "Effect"
-    }
-
-    headerRow.style.backgroundColor = headerRowColors[categoryName]
-    headerRow.style.color = "#ffffff"
-    headerRow.classList.add(removeSpaces(categoryName))
-    headerRow.classList.add("headerRow")
-    
-    return headerRow
-}
-
-function createRow(templates, name, categoryName, categoryType) {
-    var row = templates.row.content.firstElementChild.cloneNode(true)
-    row.getElementsByClassName("name")[0].textContent = name
-    row.getElementsByClassName("tooltipText")[0].textContent = tooltips[name]
-    row.id = "row " + name
-    if (categoryType != itemCategories) {
-        row.getElementsByClassName("progressBar")[0].onclick = function() {setTask(name)}
-    } else {
-        row.getElementsByClassName("button")[0].onclick = categoryName == "Properties" ? function() {setProperty(name)} : function() {setMisc(name)}
-    }
-
-    return row
-}
-
-function createAllRows(categoryType, tableId) {
-    var templates = {
-        headerRow: document.getElementsByClassName(categoryType == itemCategories ? "headerRowItemTemplate" : "headerRowTaskTemplate")[0],
-        row: document.getElementsByClassName(categoryType == itemCategories ? "rowItemTemplate" : "rowTaskTemplate")[0],
-    }
-
-    var table = document.getElementById(tableId)
-
-    for (categoryName in categoryType) {
-        var headerRow = createHeaderRow(templates, categoryType, categoryName)
-        table.appendChild(headerRow)
-        
-        var category = categoryType[categoryName]
-        category.forEach(function(name) {
-            var row = createRow(templates, name, categoryName, categoryType)
-            table.appendChild(row)       
-        })
-
-        var requiredRow = createRequiredRow(categoryName)
-        table.append(requiredRow)
-    }
-}
-
-function updateQuickTaskDisplay(taskType) {
-    var currentTask = taskType == "job" ? gameData.currentJob : gameData.currentSkill
-    var quickTaskDisplayElement = document.getElementById("quickTaskDisplay")
-    var progressBar = quickTaskDisplayElement.getElementsByClassName(taskType)[0]
-    progressBar.getElementsByClassName("name")[0].textContent = currentTask.name + " lvl " + currentTask.level
-    progressBar.getElementsByClassName("progressFill")[0].style.width = currentTask.xp / currentTask.getMaxXp() * 100 + "%"
-}
-
-function updateRequiredRows(data, categoryType) {
-    var requiredRows = document.getElementsByClassName("requiredRow")
-    for (requiredRow of requiredRows) {
-        var nextEntity = null
-        var category = categoryType[requiredRow.id] 
-        if (category == null) {continue}
-        for (i = 0; i < category.length; i++) {
-            var entityName = category[i]
-            if (i >= category.length - 1) break
-            var requirements = gameData.requirements[entityName]
-            if (requirements && i == 0) {
-                if (!requirements.isCompleted()) {
-                    nextEntity = data[entityName]
-                    break
-                }
-            }
-
-            var nextIndex = i + 1
-            if (nextIndex >= category.length) {break}
-            var nextEntityName = category[nextIndex]
-            nextEntityRequirements = gameData.requirements[nextEntityName]
-
-            if (!nextEntityRequirements.isCompleted()) {
-                nextEntity = data[nextEntityName]
-                break
-            }       
+        if (gameData.selectedTab !== 'settings') {
+            previousSelectedTab = gameData.selectedTab;
         }
+    }
 
-        if (nextEntity == null) {
-            requiredRow.classList.add("hiddenTask")           
+    const tabs = document.getElementsByClassName('tab');
+    for (const tab of tabs) {
+        tab.style.display = 'none';
+    }
+    document.getElementById(selectedTab).style.display = 'block';
+
+    const tabButtonElements = document.getElementsByClassName('tabButton');
+    for (const tabButton of tabButtonElements) {
+        tabButton.classList.remove('active');
+    }
+    tabButtons[selectedTab].classList.add('active');
+
+    Dom.get().byId('content').style.animationPlayState = 'running';
+
+    gameData.selectedTab = selectedTab;
+    gameData.save();
+
+    hideAllTooltips();
+}
+
+// noinspection JSUnusedGlobalSymbols -- used in HTML
+function togglePause() {
+    switch (gameData.state) {
+        case gameStates.PLAYING:
+            gameData.transitionState(gameStates.PAUSED);
+            break;
+        case gameStates.PAUSED:
+            gameData.transitionState(gameStates.PLAYING);
+            break;
+        case gameStates.BOSS_FIGHT:
+            gameData.transitionState(gameStates.BOSS_FIGHT_PAUSED);
+            break;
+        case gameStates.BOSS_FIGHT_PAUSED:
+            gameData.transitionState(gameStates.BOSS_FIGHT);
+            break;
+    }
+    // Any other state is ignored
+}
+
+function forcePause() {
+    switch (gameData.state) {
+        case gameStates.PLAYING:
+            gameData.transitionState(gameStates.PAUSED);
+            break;
+        case gameStates.BOSS_FIGHT:
+            gameData.transitionState(gameStates.BOSS_FIGHT_PAUSED);
+            break;
+    }
+    // Any other state is ignored
+}
+
+function setPointOfInterest(name) {
+    if (!gameData.state.canChangeActivation) {
+        VFX.shakePlayButton();
+        return;
+    }
+
+    gameData.activeEntities.pointOfInterest = name;
+}
+
+function createLinkBehavior() {
+    Dom.get().allBySelector('a[href="#credits"]').forEach(linkElement => {
+        linkElement.addEventListener('click', showCredits);
+    });
+}
+
+function updateConnector() {
+    const activeTabButton = Dom.get().bySelector('.tabButton.active');
+    const connectorElement = Dom.get().byId('connector');
+    const contentElement = Dom.get().byId('content');
+
+    const margin = 16;
+    const connectorHeight = 3;
+
+    XFastdom.measure(() => {
+        return {
+            activeTabButton: activeTabButton.getBoundingClientRect(),
+            contentElement: contentElement.getBoundingClientRect(),
+        };
+    }).then(/** @param {Object<DOMRect>} boundingClientRect */ (boundingClientRect) => {
+        // Way too complicated positioning logic. Raoul, don't you have other things to do?
+
+        // Element still within clipping bounds?
+        if (boundingClientRect.contentElement.bottom - boundingClientRect.activeTabButton.top <= connectorHeight) {
+            connectorElement.classList.add('hidden');
+            return;
+        }
+        if (boundingClientRect.activeTabButton.bottom - boundingClientRect.contentElement.top <= connectorHeight) {
+            connectorElement.classList.add('hidden');
+            return;
+        }
+        connectorElement.classList.remove('hidden');
+
+        // Determine vertical position
+        if (boundingClientRect.contentElement.bottom - boundingClientRect.activeTabButton.top < margin)
+        {
+            connectorElement.style.top = Math.round(boundingClientRect.activeTabButton.top) + 'px';
+        } else if (boundingClientRect.activeTabButton.bottom - boundingClientRect.contentElement.top < margin) {
+            connectorElement.style.top = Math.round(boundingClientRect.activeTabButton.bottom - connectorHeight) + 'px';
         } else {
-            requiredRow.classList.remove("hiddenTask")
-            var requirementObject = gameData.requirements[nextEntity.name]
-            var requirements = requirementObject.requirements
-
-            var coinElement = requiredRow.getElementsByClassName("coins")[0]
-            var levelElement = requiredRow.getElementsByClassName("levels")[0]
-            var evilElement = requiredRow.getElementsByClassName("evil")[0]
-
-            coinElement.classList.add("hiddenTask")
-            levelElement.classList.add("hiddenTask")
-            evilElement.classList.add("hiddenTask")
-
-            var finalText = ""
-            if (data == gameData.taskData) {
-                if (requirementObject instanceof EvilRequirement) {
-                    evilElement.classList.remove("hiddenTask")
-                    evilElement.textContent = format(requirements[0].requirement) + " evil"
-                } else {
-                    levelElement.classList.remove("hiddenTask")
-                    for (requirement of requirements) {
-                        var task = gameData.taskData[requirement.task]
-                        if (task.level >= requirement.requirement) continue
-                        var text = " " + requirement.task + " level " + format(task.level) + "/" + format(requirement.requirement) + ","
-                        finalText += text
-                    }
-                    finalText = finalText.substring(0, finalText.length - 1)
-                    levelElement.textContent = finalText
-                }
-            } else if (data == gameData.itemData) {
-                coinElement.classList.remove("hiddenTask")
-                formatCoins(requirements[0].requirement, coinElement)
-            }
-        }   
-    }
-}
-
-function updateTaskRows() {
-    for (key in gameData.taskData) {
-        var task = gameData.taskData[key]
-        var row = document.getElementById("row " + task.name)
-        row.getElementsByClassName("level")[0].textContent = task.level
-        row.getElementsByClassName("xpGain")[0].textContent = format(task.getXpGain())
-        row.getElementsByClassName("xpLeft")[0].textContent = format(task.getXpLeft())
-
-        var maxLevel = row.getElementsByClassName("maxLevel")[0]
-        maxLevel.textContent = task.maxLevel
-        gameData.rebirthOneCount > 0 ? maxLevel.classList.remove("hidden") : maxLevel.classList.add("hidden")
-
-        var progressFill = row.getElementsByClassName("progressFill")[0]
-        progressFill.style.width = task.xp / task.getMaxXp() * 100 + "%"
-        task == gameData.currentJob || task == gameData.currentSkill ? progressFill.classList.add("current") : progressFill.classList.remove("current")
-
-        var valueElement = row.getElementsByClassName("value")[0]
-        valueElement.getElementsByClassName("income")[0].style.display = task instanceof Job
-        valueElement.getElementsByClassName("effect")[0].style.display = task instanceof Skill
-
-        var skipSkillElement = row.getElementsByClassName("skipSkill")[0]
-        skipSkillElement.style.display = task instanceof Skill && autoLearnElement.checked ? "block" : "none"
-
-        if (task instanceof Job) {
-            formatCoins(task.getIncome(), valueElement.getElementsByClassName("income")[0])
-        } else {
-            valueElement.getElementsByClassName("effect")[0].textContent = task.getEffectDescription()
+            connectorElement.style.top = Math.round(
+                _.clamp(
+                    boundingClientRect.activeTabButton.top + boundingClientRect.activeTabButton.height / 2,
+                    boundingClientRect.contentElement.top + margin,
+                    boundingClientRect.contentElement.bottom - margin,
+                )) + 'px';
         }
+
+        // Determine horizontal position and size
+        connectorElement.style.left = Math.round(boundingClientRect.activeTabButton.right) + 'px';
+        connectorElement.style.width = Math.round(boundingClientRect.contentElement.left - boundingClientRect.activeTabButton.right + 1) + 'px';
+    });
+}
+
+function updateLayout(){
+    /**
+     * Do some layout calculations Raoul's too stupid to do in pure CSS.
+     */
+    const headerHeight = Dom.outerHeight(Dom.get().byId('stationOverview'));
+    const contentWrapper = Dom.get().byId('contentWrapper');
+    // Ensure inner scrolling
+    contentWrapper.style.maxHeight = `calc(100vh - 32px - ${headerHeight}px)`;
+    // Ensure full screen usage
+    contentWrapper.style.height = `calc(100vh - 32px - ${headerHeight}px)`;
+
+    updateConnector();
+
+    requestAnimationFrame(updateLayout);
+}
+
+/**
+ * @param {Module} module
+ */
+function switchModuleActivation(module) {
+    if (!gameData.state.canChangeActivation) {
+        VFX.shakePlayButton();
+        return;
     }
-}
 
-function updateItemRows() {
-    for (key in gameData.itemData) {
-        var item = gameData.itemData[key]
-        var row = document.getElementById("row " + item.name)
-        var button = row.getElementsByClassName("button")[0]
-        button.disabled = gameData.coins < item.getExpense()
-        var active = row.getElementsByClassName("active")[0]
-        var color = itemCategories["Properties"].includes(item.name) ? headerRowColors["Properties"] : headerRowColors["Misc"]
-        active.style.backgroundColor = gameData.currentMisc.includes(item) || item == gameData.currentProperty ? color : "white"
-        row.getElementsByClassName("effect")[0].textContent = item.getEffectDescription()
-        formatCoins(item.getExpense(), row.getElementsByClassName("expense")[0])
+    if (module.isActive()) {
+        module.setActive(false);
+        return;
     }
-}
 
-function updateHeaderRows(categories) {
-    for (categoryName in categories) {
-        var className = removeSpaces(categoryName)
-        var headerRow = document.getElementsByClassName(className)[0]
-        var maxLevelElement = headerRow.getElementsByClassName("maxLevel")[0]
-        gameData.rebirthOneCount > 0 ? maxLevelElement.classList.remove("hidden") : maxLevelElement.classList.add("hidden")
-        var skipSkillElement = headerRow.getElementsByClassName("skipSkill")[0]
-        skipSkillElement.style.display = categories == skillCategories && autoLearnElement.checked ? "block" : "none"
+    const gridLoadAfterActivation = attributes.gridLoad.getValue() + module.getGridLoad();
+    if (gridLoadAfterActivation > attributes.gridStrength.getValue()) {
+        VFX.highlightText(Dom.get().bySelector(`#${module.domId} .gridLoad`), 'flash-text-denied', 'flash-text-denied');
+        return;
     }
+
+    module.setActive(true);
 }
 
-function updateText() {
-    //Sidebar
-    document.getElementById("ageDisplay").textContent = daysToYears(gameData.days)
-    document.getElementById("dayDisplay").textContent = getDay()
-    document.getElementById("lifespanDisplay").textContent = daysToYears(getLifespan())
-    document.getElementById("pauseButton").textContent = gameData.paused ? "Play" : "Pause"
+/**
+ * @param {ModuleComponent} component
+ * @param {ModuleOperation} operation
+ */
+function tryActivateOperation(component, operation) {
+    if (operation.isActive('self')) {
+        // Already active, nothing to do
+        return;
+    }
 
-    formatCoins(gameData.coins, document.getElementById("coinDisplay"))
-    setSignDisplay()
-    formatCoins(getNet(), document.getElementById("netDisplay"))
-    formatCoins(getIncome(), document.getElementById("incomeDisplay"))
-    formatCoins(getExpense(), document.getElementById("expenseDisplay"))
+    const gridLoadAfterActivation = attributes.gridLoad.getValue()
+        + operation.getGridLoad()
+        - component.getActiveOperation().getGridLoad();
+    if (gridLoadAfterActivation > attributes.gridStrength.getValue()) {
+        VFX.highlightText(Dom.get().bySelector(`#${operation.domId} .gridLoad > data`), 'flash-text-denied-long', 'flash-text-denied-long');
+        VFX.highlightText(Dom.get().bySelector(`#${operation.domId} .gridLoad > .floating-warning `), 'show', 'flash-floating-warning');
+        return;
+    }
 
-    document.getElementById("happinessDisplay").textContent = getHappiness().toFixed(1)
-
-    document.getElementById("evilDisplay").textContent = gameData.evil.toFixed(1)
-    document.getElementById("evilGainDisplay").textContent = getEvilGain().toFixed(1)
-
-    document.getElementById("timeWarpingDisplay").textContent = "x" + gameData.taskData["Time warping"].getEffect().toFixed(2)
-    document.getElementById("timeWarpingButton").textContent = gameData.timeWarpingEnabled ? "Disable warp" : "Enable warp"
+    // This needs to go through the component as it needs to disable other operations
+    component.activateOperation(operation);
 }
 
-function setSignDisplay() {
-    var signDisplay = document.getElementById("signDisplay")
-    if (getIncome() > getExpense()) {
-        signDisplay.textContent = "+"
-        signDisplay.style.color = "green"
-    } else if (getExpense() > getIncome()) {
-        signDisplay.textContent = "-"
-        signDisplay.style.color = "red"
+/**
+ * @param {string} domId
+ *
+ * @return {HTMLElement}
+ */
+function createRequiredRow(domId) {
+    const requirementsElement = Dom.new.fromTemplate('level4RequiredTemplate');
+    requirementsElement.id = domId;
+    requirementsElement.classList.add('level4-requirements');
+    return requirementsElement;
+}
+
+/**
+ * @param {string} categoryName
+ * @param {ModuleComponent} component
+ *
+ * @returns {HTMLElement[]}
+ */
+function createModuleLevel4Elements(categoryName, component) {
+    const level4Elements = [];
+    const operations = component.operations;
+
+    for (const operation of operations) {
+        const level4Element = Dom.new.fromTemplate('level4TaskTemplate');
+        level4Element.id = operation.domId;
+
+        const level4DomGetter = Dom.get(level4Element);
+        level4DomGetter.byClass('name').textContent = operation.title;
+        const descriptionElement = level4DomGetter.byClass('descriptionTooltip');
+        descriptionElement.ariaLabel = operation.title;
+        if (isDefined(operation.description)) {
+            descriptionElement.title = operation.description;
+        } else {
+            descriptionElement.removeAttribute('title');
+        }
+        level4DomGetter.byClass('progressBar').addEventListener('click', tryActivateOperation.bind(this, component, operation));
+        formatValue(level4DomGetter.bySelector('.gridLoad > data'), operation.getGridLoad());
+
+        level4Elements.push(level4Element);
+    }
+
+    level4Elements.push(createRequiredRow('row_requirements_component_' + component.name));
+
+    return level4Elements;
+}
+
+/**
+ * @param {string} categoryName
+ * @param {Module} module
+ * @param {HTMLSlotElement} requirementsSlot
+ *
+ * @return {HTMLElement[]}
+ */
+function createModuleLevel3Elements(categoryName, module, requirementsSlot) {
+    const level3Elements = [];
+
+    for (const component of module.components) {
+        const level3Element = Dom.new.fromTemplate('level3TaskTemplate');
+        level3Element.id = component.domId;
+
+        const level3DomGetter = Dom.get(level3Element);
+
+        const nameCell = level3DomGetter.byClass('name');
+        nameCell.textContent = component.title;
+        if (isDefined(component.description)) {
+            nameCell.title = component.description;
+        } else {
+            nameCell.removeAttribute('title');
+        }
+        const level4Slot = level3DomGetter.byClass('level4');
+        level4Slot.append(...createModuleLevel4Elements(categoryName, component));
+
+        level3Elements.push(level3Element);
+    }
+
+    const requirementsElement = Dom.new.fromTemplate('requirementsTemplate');
+    requirementsElement.id = 'row_requirements_module_' + module.name;
+    requirementsElement.classList.add('level3-requirements');
+    requirementsSlot.replaceWith(requirementsElement);
+
+    return level3Elements;
+}
+
+/**
+ *
+ * @param {string} categoryName
+ * @param {ModuleCategory} category
+ * @param {HTMLSlotElement} requirementsSlot
+ * @return {HTMLElement[]}
+ */
+function createModuleLevel2Elements(categoryName, category, requirementsSlot) {
+    const level2Elements = [];
+
+    for (const module of category.modules) {
+        const level2Element = Dom.new.fromTemplate('level2Template');
+        level2Element.id = module.domId;
+
+        const level2DomGetter = Dom.get(level2Element);
+        const nameCell = level2DomGetter.byClass('name');
+        nameCell.textContent = module.title;
+        if (isDefined(module.description)) {
+            nameCell.title = module.description;
+        } else {
+            nameCell.removeAttribute('title');
+        }
+        /** @var {HTMLInputElement} */
+        const switchElement = level2DomGetter.byClass('moduleActivationSwitch');
+        switchElement.id = 'switch_' + module.domId;
+        switchElement.addEventListener('click', switchModuleActivation.bind(this, module));
+        level2DomGetter.byClass('moduleActivationLabel').htmlFor = switchElement.id;
+        initTooltip(level2DomGetter.byClass('maxLevel'), {
+            title: () => {
+                return `<b>x${(1 + module.maxLevel / 100).toFixed(2)} XP</b> for all operations in this module.`;
+            },
+            html: true,
+        });
+
+        const level3Slot = level2DomGetter.byId('level3');
+        level3Slot.replaceWith(...createModuleLevel3Elements(categoryName, module, level2DomGetter.byId('level3Requirements')));
+
+        level2Elements.push(level2Element);
+    }
+
+    const requirementsElement = Dom.new.fromTemplate('requirementsTemplate');
+    requirementsElement.id = 'row_requirements_category_' + categoryName;
+    requirementsElement.classList.add('level2-requirements');
+    requirementsSlot.replaceWith(requirementsElement);
+
+    return level2Elements;
+}
+
+function createModulesUI(categoryDefinition, domId) {
+    const slot = Dom.get().byId(domId);
+    const level1Elements = [];
+
+    for (const key in categoryDefinition) {
+        const level1Element = Dom.new.fromTemplate('level1Template');
+
+        /** @var {ModuleCategory} */
+        const category = categoryDefinition[key];
+        level1Element.id = category.domId;
+        level1Element.classList.add(category.name);
+
+        const level1DomGetter = Dom.get(level1Element);
+        const categoryCell = level1DomGetter.byClass('category');
+        categoryCell.textContent = category.title;
+        if (isDefined(category.description)) {
+            categoryCell.title = category.description;
+        } else {
+            categoryCell.removeAttribute('title');
+        }
+
+        const level2Slot = level1DomGetter.byId('level2');
+        level2Slot.replaceWith(...createModuleLevel2Elements(category.name, category, level1DomGetter.byId('level2Requirements')));
+
+        level1Elements.push(level1Element);
+    }
+
+    slot.replaceWith(...level1Elements);
+
+    const requirementsElement = Dom.new.fromTemplate('requirementsTemplate');
+    requirementsElement.id = 'row_requirements_moduleCategory';
+    requirementsElement.classList.add('level1-requirements');
+    Dom.get().byId('moduleCategoryRequirements').replaceWith(requirementsElement);
+}
+
+/**
+ *
+ * @param {PointOfInterest[]} pointsOfInterest
+ * @param {string} sectorName
+ * @return {HTMLElement[]}
+ */
+function createLevel4SectorElements(pointsOfInterest, sectorName) {
+    const level4Elements = [];
+    for (const pointOfInterest of pointsOfInterest) {
+        const level4Element = Dom.new.fromTemplate('level4PointOfInterestTemplate');
+        level4Element.id = pointOfInterest.domId;
+
+        const level4DomGetter = Dom.get(level4Element);
+        level4DomGetter.byClass('name').textContent = pointOfInterest.title;
+        const descriptionElement = level4DomGetter.byClass('descriptionTooltip');
+        descriptionElement.ariaLabel = pointOfInterest.title;
+        if (isDefined(pointOfInterest.description)) {
+            descriptionElement.title = pointOfInterest.description;
+        } else {
+            descriptionElement.removeAttribute('title');
+        }
+        level4DomGetter.byClass('modifier').innerHTML = pointOfInterest.modifiers.map(Modifier.getDescription).join(',\n');
+        level4DomGetter.byClass('point-of-interest').addEventListener('click', () => {
+            setPointOfInterest(pointOfInterest.name);
+        });
+
+        level4Elements.push(level4Element);
+    }
+
+    level4Elements.push(createRequiredRow('row_requirements_sector_' + sectorName));
+    return level4Elements;
+}
+
+/**
+ *
+ * @param {Sector} sector
+ * @param {string} sectorName
+ * @return {HTMLElement}
+ */
+function createLevel3SectorElement(sector, sectorName) {
+    const level3Element = Dom.new.fromTemplate('level3PointOfInterestTemplate');
+
+    level3Element.id = sector.domId;
+    level3Element.classList.add(sectorName);
+    level3Element.classList.remove('ps-3');
+
+    const level3DomGetter = Dom.get(level3Element);
+    const nameCell = level3DomGetter.byClass('name');
+    nameCell.textContent = sector.title;
+    if (isDefined(sector.description)) {
+        nameCell.title = sector.description;
     } else {
-        signDisplay.textContent = ""
-        signDisplay.style.color = "gray"
+        nameCell.removeAttribute('title');
+    }
+
+    /** @type {HTMLElement} */
+    const level4Slot = level3DomGetter.byClass('level4');
+    level4Slot.append(...createLevel4SectorElements(sector.pointsOfInterest, sectorName));
+    return level3Element;
+}
+
+/**
+ * Due to styling reasons, the two rendered levels are actually level 3 + 4 - don't get confused.
+ * @param {Object<Sector>} categoryDefinition
+ * @param {string} domId
+ */
+function createSectorsUI(categoryDefinition, domId) {
+    const slot = Dom.get().byId(domId);
+    const level3Elements = [];
+
+    for (const key in categoryDefinition) {
+        const sector = categoryDefinition[key];
+        const sectorElement = createLevel3SectorElement(sector, sector.name);
+        if (level3Elements.length === 0) {
+            sectorElement.classList.remove('mt-2');
+        }
+        level3Elements.push(sectorElement);
+    }
+
+    slot.replaceWith(...level3Elements);
+
+    const requirementsElement = Dom.new.fromTemplate('requirementsTemplate');
+    requirementsElement.id = 'row_requirements_sector';
+    requirementsElement.classList.add('level1-requirements');
+    Dom.get().byId('sectorRequirements').replaceWith(requirementsElement);
+}
+
+/**
+ *
+ * @param {DomGetter} domGetter
+ * @param {Battle} battle
+ */
+function initializeBattleElement(domGetter, battle) {
+    domGetter.byClass('name').textContent = battle.title;
+    const descriptionElement = domGetter.byClass('descriptionTooltip');
+    descriptionElement.ariaLabel = battle.title;
+    if (isDefined(battle.description)) {
+        descriptionElement.title = battle.description;
+    } else {
+        descriptionElement.removeAttribute('title');
     }
 }
 
-function getNet() {
-    var net = Math.abs(getIncome() - getExpense())
-    return net
-}
+/**
+ *
+ * @param {Battle[]} battles
+ * @return {HTMLElement[]}
+ */
+function createLevel4BattleElements(battles) {
+    const level4Elements = [];
+    for (const battle of battles) {
+        const level4Element = Dom.new.fromTemplate('level4BattleTemplate');
+        level4Element.id = battle.domId;
+        const domGetter = Dom.get(level4Element);
+        initializeBattleElement(domGetter, battle);
+        domGetter.byClass('rewards').textContent = battle.getRewardsDescription();
+        domGetter.byClass('progressBar').addEventListener('click', () => {
+            if (!gameData.state.canChangeActivation) {
+                VFX.shakePlayButton();
+                return;
+            }
 
-function hideEntities() {
-    for (key in gameData.requirements) {
-        var requirement = gameData.requirements[key]
-        var completed = requirement.isCompleted()
-        for (element of requirement.elements) {
-            if (completed) {
-                element.classList.remove("hidden")
+            if (battle instanceof BossBattle){
+                gameData.transitionState(gameStates.BOSS_FIGHT_INTRO);
             } else {
-                element.classList.add("hidden")
+                battle.toggle();
+            }
+        });
+        domGetter.byClass('progressFill').classList.toggle('bossBattle', battle instanceof BossBattle);
+        if (battle instanceof BossBattle) {
+            const dangerElement = domGetter.byClass('danger');
+            dangerElement.classList.add('effect');
+            dangerElement.innerHTML = battle.getEffectDescription();
+        } else {
+            formatValue(domGetter.bySelector('.danger > data'), battle.getEffect(EffectType.Danger));
+        }
+
+        level4Elements.push(level4Element);
+    }
+
+    level4Elements.push(createRequiredRow('row_requirements_battle'));
+    return level4Elements;
+}
+
+function createUnfinishedBattlesUI() {
+    const level3Element = Dom.new.fromTemplate('level3BattleTemplate');
+
+    level3Element.id = 'unfinishedBattles';
+    level3Element.classList.remove('ps-3');
+
+    const domGetter = Dom.get(level3Element);
+    domGetter.byClass('name').textContent = 'Open';
+
+    /** @type {HTMLElement} */
+    const level4Slot = domGetter.byClass('level4');
+    level4Slot.append(...createLevel4BattleElements(Object.values(battles)));
+
+    return level3Element;
+}
+
+/**
+ *
+ * @param {Battle[]} battles
+ * @return {HTMLElement[]}
+ */
+function createLevel4FinishedBattleElements(battles) {
+    const level4Elements = [];
+    for (const battle of battles) {
+        const level4Element = Dom.new.fromTemplate('level4BattleTemplate');
+        level4Element.id = 'row_done_' + battle.name;
+        level4Element.classList.add('hidden');
+        const domGetter = Dom.get(level4Element);
+        initializeBattleElement(domGetter, battle);
+        domGetter.byClass('progressBar').classList.remove('clickable');
+        domGetter.bySelector('.progressBar').dataset.layer = String(numberOfLayers);
+        domGetter.bySelector('.progressBar .progressFill').style.width = '0%';
+        formatValue(
+            domGetter.bySelector('.level > data'),
+            battle.targetLevel,
+            {keepNumber: true},
+        );
+        domGetter.byClass('xpGain').classList.add('hidden');
+        domGetter.byClass('xpLeft').classList.add('hidden');
+        domGetter.byClass('danger').classList.add('hidden');
+        domGetter.byClass('rewards').textContent = battle.getRewardsDescription();
+
+        // unshift --> battles in reverse order
+        level4Elements.unshift(level4Element);
+    }
+
+    return level4Elements;
+}
+
+function createFinishedBattlesUI() {
+    const level3Element = Dom.new.fromTemplate('level3BattleTemplate');
+
+    level3Element.id = 'finishedBattles';
+    level3Element.classList.remove('ps-3');
+
+    const domGetter = Dom.get(level3Element);
+    domGetter.byClass('header-row').classList.replace('text-bg-light', 'text-bg-dark');
+    domGetter.byClass('name').textContent = 'Completed';
+    domGetter.byClass('level').textContent = 'Defeated levels';
+    domGetter.byClass('xpGain').classList.add('hidden');
+    domGetter.byClass('xpLeft').classList.add('hidden');
+    domGetter.byClass('danger').classList.add('hidden');
+
+    /** @type {HTMLElement} */
+    const level4Slot = domGetter.byClass('level4');
+    level4Slot.append(...createLevel4FinishedBattleElements(Object.values(battles)));
+
+    return level3Element;
+}
+
+function createBattlesUI(categoryDefinition, domId) {
+    const slot = Dom.get().byId(domId);
+    slot.replaceWith(createUnfinishedBattlesUI(), createFinishedBattlesUI());
+}
+
+function createGalacticSecretsUI() {
+    const level4Elements = [];
+    for (const key in galacticSecrets) {
+        const galacticSecret = galacticSecrets[key];
+        const level4Element = Dom.new.fromTemplate('level4GalacticSecretTemplate');
+        level4Element.id = galacticSecret.domId;
+        const domGetter = Dom.get(level4Element);
+        domGetter.byClass('component').textContent = galacticSecret.unlocks.component.title;
+        domGetter.byClass('operation').textContent = galacticSecret.unlocks.title;
+        const descriptionElement = domGetter.byClass('descriptionTooltip');
+        descriptionElement.ariaLabel = galacticSecret.title;
+        if (isDefined(galacticSecret.description)) {
+            descriptionElement.title = galacticSecret.description;
+        } else {
+            descriptionElement.removeAttribute('title');
+        }
+        domGetter.bySelector('.progressBar .progressFill').style.width = '0%';
+
+        domGetter.byClass('parent').textContent = galacticSecret.unlocks.module.title;
+        domGetter.byClass('effect').textContent = galacticSecret.unlocks.getEffectDescription(1);
+        formatValue(domGetter.bySelector('.gridLoad > data'), galacticSecret.unlocks.getGridLoad());
+
+        domGetter.byClass('progressBar').addEventListener('pointerdown', (event) => {
+            if (galacticSecret.isUnlocked) return;
+
+            const galacticSecretCost = calculateGalacticSecretCost();
+            if (galacticSecretCost > gameData.essenceOfUnknown) {
+                visuallyDenyGalacticSecretUnlock(galacticSecret);
+                return;
+            }
+
+            const tooltip = bootstrap.Tooltip.getInstance(event.currentTarget);
+            if (tooltip !== null) {
+                tooltip.hide();
+                tooltip.disable();
+            }
+            galacticSecret.inProgress = true;
+        });
+
+        level4Elements.push(level4Element);
+    }
+
+    window.addEventListener('pointerup', () => {
+        for (const key in galacticSecrets) {
+            const galacticSecret = galacticSecrets[key];
+            galacticSecret.inProgress = false;
+            const tooltip = bootstrap.Tooltip.getInstance(Dom.get().bySelector('#' + galacticSecret.domId + ' .progressBar'));
+            if (tooltip !== null) {
+                tooltip.enable();
+            }
+        }
+    });
+
+    const level4Slot = Dom.get().bySelector('#galacticSecrets tbody.level4');
+    level4Slot.append(...level4Elements);
+}
+
+function createModulesQuickDisplay() {
+    const slot = Dom.get().byId('modulesQuickTaskDisplay');
+    const quickDisplayElements = [];
+    for (const moduleName in modules) {
+        const module = modules[moduleName];
+        const moduleQuickTaskDisplayElement = Dom.new.fromTemplate('moduleQuickTaskDisplayTemplate');
+        const moduleDomGetter = Dom.get(moduleQuickTaskDisplayElement);
+        moduleQuickTaskDisplayElement.classList.add(moduleName);
+        moduleDomGetter.byClass('moduleName').textContent = module.title;
+        const componentSlot = moduleDomGetter.byId('componentsQuickTaskDisplay');
+        const componentQuickTaskDisplayElements = [];
+        for (const component of module.components) {
+            for (const operation of component.operations) {
+                const componentQuickTaskDisplayElement = Dom.new.fromTemplate('componentQuickTaskDisplayTemplate');
+                componentQuickTaskDisplayElement.title = component.title + ': ' + operation.title;
+                const componentDomGetter = Dom.get(componentQuickTaskDisplayElement);
+                componentQuickTaskDisplayElement.classList.add(component.name, operation.name);
+                componentDomGetter.bySelector('.name > .component').textContent = component.title;
+                componentDomGetter.bySelector('.name > .operation').textContent = operation.title;
+                componentQuickTaskDisplayElements.push(componentQuickTaskDisplayElement);
+            }
+        }
+        componentSlot.replaceWith(...componentQuickTaskDisplayElements);
+
+        quickDisplayElements.push(moduleQuickTaskDisplayElement);
+    }
+    slot.replaceWith(...quickDisplayElements);
+}
+
+function createBattlesQuickDisplay() {
+    const slot = Dom.get().byId('battlesQuickTaskDisplay');
+    const quickDisplayElements = [];
+    for (const battleName in battles) {
+        const battle = battles[battleName];
+        const quickDisplayElement = Dom.new.fromTemplate('battleQuickTaskDisplayTemplate');
+        const domGetter = Dom.get(quickDisplayElement);
+        quickDisplayElement.classList.add(battle.name);
+        domGetter.byClass('name').textContent = battle.title;
+        domGetter.byClass('progressFill').classList.toggle('bossBattle', battle instanceof BossBattle);
+
+        quickDisplayElements.push(quickDisplayElement);
+    }
+
+    slot.replaceWith(...quickDisplayElements);
+}
+
+/**
+ * @param {AttributeDefinition} attribute
+ */
+function createAttributeInlineHTML(attribute) {
+    return `<span class="attribute ${attribute.textClass}">${attribute.title}</span>`;
+}
+
+/**
+ *
+ * @param {AttributeDefinition} attribute
+ * @returns {HTMLElement}
+ */
+function createAttributeRow(attribute) {
+    const attributeRow = Dom.new.fromTemplate('attributeRowTemplate');
+    attributeRow.classList.add(attribute.name);
+    const domGetter = Dom.get(attributeRow);
+    if (attribute.icon === null) {
+        domGetter.byClass('icon').remove();
+    } else {
+        domGetter.byClass('icon').src = attribute.icon;
+    }
+    let nameElement = domGetter.byClass('name');
+    nameElement.textContent = attribute.title;
+    nameElement.classList.add(attribute.textClass);
+    domGetter.byClass('description').innerHTML = attribute.description;
+    return attributeRow;
+}
+
+/**
+ *
+ * @param {HTMLElement} balanceElement
+ * @param {function(EffectType): number} getEffectFn
+ * @param {function(): EffectDefinition[]} getEffectsFn
+ * @param {EffectType} effectType
+ * @param {string} name
+ * @param {function():boolean} isActiveFn
+ */
+function createAttributeBalanceEntry(balanceElement, getEffectFn, getEffectsFn, effectType, name, isActiveFn) {
+    const affectsEffectType = getEffectsFn()
+        .find((effect) => effect.effectType === effectType) !== undefined;
+    if (!affectsEffectType) return;
+
+    const balanceEntryElement = Dom.new.fromTemplate('balanceEntryTemplate');
+    const domGetter = Dom.get(balanceEntryElement);
+    domGetter.byClass('name').textContent = '(' + name + ')';
+    domGetter.byClass('operator').textContent = effectType.operator;
+    attributeBalanceEntries.push({
+        element: balanceEntryElement,
+        effectType: effectType,
+        getEffect: getEffectFn,
+        getEffects: getEffectsFn,
+        isActive: isActiveFn,
+    });
+    balanceElement.append(balanceEntryElement);
+}
+
+/**
+ *
+ * @param {HTMLElement} rowElement
+ * @param {EffectType[]} effectTypes
+ */
+function createAttributeBalance(rowElement, effectTypes) {
+    const balanceElement = Dom.get(rowElement).byClass('balance');
+    balanceElement.classList.remove('hidden');
+
+    let onlyMultipliers = effectTypes.every((effectType) => effectType.operator === 'x');
+
+    const balanceEntryElement = Dom.new.fromTemplate('balanceEntryTemplate');
+    const domGetter = Dom.get(balanceEntryElement);
+    domGetter.byClass('operator').textContent = '';
+    if (onlyMultipliers) {
+        domGetter.byClass('entryValue').textContent = '1';
+    } else {
+        domGetter.byClass('entryValue').textContent = '0';
+    }
+    domGetter.byClass('name').textContent = '(Base)';
+    balanceElement.append(balanceEntryElement);
+
+    for (const effectType of effectTypes) {
+        for (const moduleName in modules) {
+            const module = modules[moduleName];
+            for (const component of module.components) {
+                for (const operation of component.operations) {
+                    createAttributeBalanceEntry(
+                        balanceElement,
+                        operation.getEffect.bind(operation),
+                        operation.getEffects.bind(operation),
+                        effectType,
+                        module.title + ': ' + component.title + ': ' + operation.title,
+                        operation.isActive.bind(operation, 'inHierarchy'),
+                    );
+                }
+            }
+        }
+
+        for (const key in battles) {
+            /** @type {Battle} */
+            const battle = battles[key];
+            createAttributeBalanceEntry(
+                balanceElement,
+                battle.getReward.bind(battle),
+                () => battle.rewards,
+                effectType,
+                'Defeated ' + battle.title,
+                battle.isDone.bind(battle),
+            );
+            createAttributeBalanceEntry(
+                balanceElement,
+                battle.getEffect.bind(battle),
+                battle.getEffects.bind(battle),
+                effectType,
+                'Fighting ' + battle.title,
+                () => battle.isActive() && !battle.isDone(),
+            );
+        }
+
+        for (const key in pointsOfInterest) {
+            const pointOfInterest = pointsOfInterest[key];
+            createAttributeBalanceEntry(
+                balanceElement,
+                pointOfInterest.getEffect.bind(pointOfInterest),
+                pointOfInterest.getEffects.bind(pointOfInterest),
+                effectType,
+                'Point of Interest: ' + pointOfInterest.title,
+                pointOfInterest.isActive.bind(pointOfInterest),
+            );
+        }
+    }
+}
+
+/**
+ * @param {HTMLElement} rowElement
+ */
+function createGridLoadBalance(rowElement) {
+    const balanceElement = Dom.get(rowElement).byClass('balance');
+    balanceElement.classList.remove('hidden');
+
+    for (const moduleName in modules) {
+        const module = modules[moduleName];
+        for (const component of module.components) {
+            for (const operation of component.operations) {
+                if (operation.getGridLoad() === 0) continue;
+
+                const balanceEntryElement = Dom.new.fromTemplate('balanceEntryTemplate');
+                const domGetter = Dom.get(balanceEntryElement);
+                domGetter.byClass('name').textContent = '(' + module.title + ': ' + component.title + ': ' + operation.title + ')';
+                domGetter.byClass('operator').textContent = '+';
+                formatValue(domGetter.byClass('entryValue'), operation.getGridLoad());
+                gridLoadBalanceEntries.push({
+                    element: balanceEntryElement,
+                    taskOrItem: operation,
+                    isActive: operation.isActive.bind(operation, 'inHierarchy'),
+                });
+                balanceElement.append(balanceEntryElement);
             }
         }
     }
 }
 
-function createItemData(baseData) {
-    for (var item of baseData) {
-        gameData.itemData[item.name] = "happiness" in item ? new Property(task) : new Misc(task)
-        gameData.itemData[item.name].id = "item " + item.name
-    }
-}
-
-function doCurrentTask(task) {
-    task.increaseXp()
-    if (task instanceof Job) {
-        increaseCoins()
-    }
-}
-
-function getIncome() {
-    var income = 0
-    income += gameData.currentJob.getIncome()
-    return income
-}
-
-function increaseCoins() {
-    var coins = applySpeed(getIncome())
-    gameData.coins += coins
-}
-
-function daysToYears(days) {
-    var years = Math.floor(days / 365)
-    return years
-}
-
-function getCategoryFromEntityName(categoryType, entityName) {
-    for (categoryName in categoryType) {
-        var category = categoryType[categoryName]
-        if (category.includes(entityName)) {
-            return category
+function createAttributesDisplay() {
+    const attributeContainers = Dom.get().allBySelector('[data-attribute]');
+    for (/** @var {HTMLElement} */ const attributeContainer of attributeContainers) {
+        /** @var {AttributeDefinition} */
+        const attribute = attributes[attributeContainer.dataset.attribute];
+        const domGetter = Dom.get(attributeContainer);
+        if (_.defaultTo(attributeContainer.dataset.attributeTooltip, 'true').toLowerCase() === 'true') {
+            attributeContainer.dataset.bsTitle = attribute.description;
+        }
+        const iconElement = domGetter.byClass('icon');
+        if (iconElement !== null) {
+            iconElement.src = attribute.icon;
+            iconElement.alt = attribute.title + ' icon';
+        }
+        const labelElement = domGetter.byClass('label');
+        if (labelElement !== null) {
+            labelElement.classList.add(attribute.textClass);
+            labelElement.textContent = attribute.title;
         }
     }
 }
 
-function getNextEntity(data, categoryType, entityName) {
-    var category = getCategoryFromEntityName(categoryType, entityName)
-    var nextIndex = category.indexOf(entityName) + 1
-    if (nextIndex > category.length - 1) return null
-    var nextEntityName = category[nextIndex]
-    var nextEntity = data[nextEntityName]
-    return nextEntity
+function createAttributesUI() {
+    const slot = Dom.get().byId('attributeRows');
+    const rows = [];
+
+    // Danger
+    const dangerRow = createAttributeRow(attributes.danger);
+    Dom.get(dangerRow).byClass('balance').classList.remove('hidden');
+    createAttributeBalance(dangerRow, [EffectType.Danger, EffectType.DangerFactor]);
+    rows.push(dangerRow);
+
+    // Grid Load
+    const gridLoadRow = createAttributeRow(attributes.gridLoad);
+    Dom.get(gridLoadRow).byClass('balance').classList.remove('hidden');
+    createGridLoadBalance(gridLoadRow);
+    rows.push(gridLoadRow);
+
+    // Grid Strength
+    const gridStrengthRow = createAttributeRow(attributes.gridStrength);
+    const gridStrengthFormulaElement = Dom.get(gridStrengthRow).byClass('formula');
+    gridStrengthFormulaElement.classList.remove('hidden');
+    gridStrengthFormulaElement.innerHTML = '+<data value="0" class="delta">?</data> per cycle';
+    rows.push(gridStrengthRow);
+
+    // Growth
+    const growthRow = createAttributeRow(attributes.growth);
+    Dom.get(growthRow).byClass('balance').classList.remove('hidden');
+    createAttributeBalance(growthRow, [EffectType.Growth, EffectType.GrowthFactor]);
+    rows.push(growthRow);
+
+    // Heat
+    const heatRow = createAttributeRow(attributes.heat);
+    Dom.get(heatRow).byClass('description').innerHTML += `<br />
+${createAttributeInlineHTML(attributes.military)} exceeding ${createAttributeInlineHTML(attributes.danger)} is disregarded.
+The total can never be less than <data value="0.1">0.1</data> - space is dangerous!`;
+    const heatFormulaElement = Dom.get(heatRow).byClass('formula');
+    heatFormulaElement.classList.remove('hidden');
+    heatFormulaElement.innerHTML = `<ul class="balance m-0 list-unstyled">
+    <li class="balanceEntry">${createAttributeInlineHTML(attributes.danger)} - ${createAttributeInlineHTML(attributes.military)}</li>
+    <li><span class="operator">+</span> raw <span class="attribute ${attributes.heat.textClass}">Heat</span> from Boss</li>
+</ul>`;
+    rows.push(heatRow);
+
+    // Industry
+    const industryRow = createAttributeRow(attributes.industry);
+    Dom.get(industryRow).byClass('balance').classList.remove('hidden');
+    createAttributeBalance(industryRow, [EffectType.Industry, EffectType.IndustryFactor]);
+    rows.push(industryRow);
+
+    // Military
+    const militaryRow = createAttributeRow(attributes.military);
+    Dom.get(militaryRow).byClass('balance').classList.remove('hidden');
+    createAttributeBalance(militaryRow, [EffectType.Military, EffectType.MilitaryFactor]);
+    rows.push(militaryRow);
+
+    // Population
+    const populationRow = createAttributeRow(attributes.population);
+    const populationFormulaElement = Dom.get(populationRow).byClass('formula');
+    populationFormulaElement.classList.remove('hidden');
+    populationFormulaElement.innerHTML =
+        '(0.1 * ' +  createAttributeInlineHTML(attributes.growth) +
+        ') - (0.01 * ' +
+        createAttributeInlineHTML(attributes.population) + ' * ' +
+        createAttributeInlineHTML(attributes.heat) + ')<br />&wedgeq; <data value="0" class="delta">?</data> per cycle';
+    rows.push(populationRow);
+
+    // Research
+    const researchRow = createAttributeRow(attributes.research);
+    Dom.get(researchRow).byClass('balance').classList.remove('hidden');
+    createAttributeBalance(researchRow, [EffectType.Research, EffectType.ResearchFactor]);
+    rows.push(researchRow);
+
+    slot.append(...rows);
 }
 
-function autoPromote() {
-    if (!autoPromoteElement.checked) return
-    var nextEntity = getNextEntity(gameData.taskData, jobCategories, gameData.currentJob.name)
-    if (nextEntity == null) return
-    var requirement = gameData.requirements[nextEntity.name]
-    if (requirement.isCompleted()) gameData.currentJob = nextEntity
+function createEnergyGridDisplay() {
+    const tooltipText = createGridStrengthAndLoadDescription(createAttributeInlineHTML);
+    Dom.get().byId('gridLabel').title = tooltipText;
+    Dom.get().byId('gridStrength').title = tooltipText;
+
+    const tickElementsTop = [];
+    const tickElementsBottom = [];
+    for (let i = 0; i < (5 * 8 + 1); i++) {
+        tickElementsTop.push(Dom.new.fromTemplate('tickTemplate'));
+        tickElementsBottom.push(Dom.new.fromTemplate('tickTemplate'));
+    }
+
+    Dom.get().byId('ticksTop').replaceWith(...tickElementsTop);
+    Dom.get().byId('ticksBottom').replaceWith(...tickElementsBottom);
 }
 
-function checkSkillSkipped(skill) {
-    var row = document.getElementById("row " + skill.name)
-    var isSkillSkipped = row.getElementsByClassName("checkbox")[0].checked
-    return isSkillSkipped
+function cleanUpDom() {
+    for (const template of document.querySelectorAll('template')) {
+        if (template.classList.contains('keep')) continue;
+
+        template.remove();
+    }
 }
 
-function setSkillWithLowestMaxXp() {
-    var xpDict = {}
+function updateModulesQuickDisplay() {
+    for (const key in modules) {
+        const module = modules[key];
+        let container = Dom.get().bySelector('.quickTaskDisplayContainer.' + module.name);
+        if (!module.isActive()) {
+            container.classList.add('hidden');
+            continue;
+        }
 
-    for (skillName in gameData.taskData) {
-        var skill = gameData.taskData[skillName]
-        var requirement = gameData.requirements[skillName]
-        if (skill instanceof Skill && requirement.isCompleted() && !checkSkillSkipped(skill)) {
-            xpDict[skill.name] = skill.level //skill.getMaxXp() / skill.getXpGain()
+        container.classList.remove('hidden');
+        const containerDomGetter = Dom.get(container);
+        for (const component of module.components) {
+            for (const operation of component.operations) {
+                let quickDisplayElement = containerDomGetter.bySelector('.quickTaskDisplay.' + component.name + '.' + operation.name);
+                const componentDomGetter = Dom.get(quickDisplayElement);
+
+                if (!operation.isActive('self')) {
+                    quickDisplayElement.classList.add('hidden');
+                    continue;
+                }
+
+                quickDisplayElement.classList.remove('hidden');
+                formatValue(
+                    componentDomGetter.bySelector('.name > .level'),
+                    operation.level,
+                    {keepNumber: true},
+                );
+                setProgress(componentDomGetter.byClass('progressFill'), operation.xp / operation.getMaxXp());
+            }
+        }
+    }
+}
+
+/**
+ *
+ * @param {HTMLElement} progressBar
+ * @param {LayeredTask} battle
+ */
+function setBattleProgress(progressBar, battle) {
+    const domGetter = Dom.get(progressBar);
+    if (battle.isDone()) {
+        progressBar.dataset.layer = String(numberOfLayers);
+        domGetter.byClass('progressFill').style.width = '0%';
+        return;
+    }
+
+    const progressBarFill = domGetter.byClass('progressFill');
+    setProgress(progressBarFill, 1 - (battle.xp / battle.getMaxXp()), false);
+
+    if (!(battle instanceof BossBattle)) {
+        return;
+    }
+
+    const layerLevel = battle.level % numberOfLayers;
+    progressBarFill.dataset.layer = String(layerLevel);
+    if (battle.getDisplayedLevel() === 1) {
+        progressBar.dataset.layer = String(numberOfLayers);
+    } else {
+        const nextLayerLevel = (battle.level + 1) % numberOfLayers;
+        progressBar.dataset.layer = String(nextLayerLevel);
+    }
+}
+
+function updateBattlesQuickDisplay() {
+    for (const battleName in battles) {
+        /** @type {Battle} */
+        const battle = battles[battleName];
+        const quickDisplayElement = Dom.get().bySelector('#battleTabButton .quickTaskDisplay.' + battle.name);
+        const componentDomGetter = Dom.get(quickDisplayElement);
+        if (battle instanceof BossBattle) {
+            if (!isBossBattleAvailable()) {
+                quickDisplayElement.classList.add('hidden');
+                continue;
+            }
+        } else if (!battle.isActive()) {
+            quickDisplayElement.classList.add('hidden');
+            continue;
+        }
+
+        quickDisplayElement.classList.remove('hidden');
+        componentDomGetter.byClass('progressFill').classList.toggle('current', battle.isActive() && !battle.isDone());
+        const levelElement = componentDomGetter.byClass('level');
+        if (battle.isDone()) {
+            componentDomGetter.byClass('levelLabel').classList.add('hidden');
+            levelElement.classList.add('hidden');
+            componentDomGetter.byClass('defeatedLabel').classList.remove('hidden');
+        } else {
+            componentDomGetter.byClass('levelLabel').classList.remove('hidden');
+            levelElement.classList.remove('hidden');
+            componentDomGetter.byClass('defeatedLabel').classList.add('hidden');
+            formatValue(
+                levelElement,
+                battle.getDisplayedLevel(),
+                {keepNumber: true},
+            );
+        }
+        setBattleProgress(componentDomGetter.byClass('progressBar'), battle);
+    }
+}
+
+function updateLocationQuickDisplay() {
+    const activePointOfInterest = pointsOfInterest[gameData.activeEntities.pointOfInterest];
+    const quickDisplay = Dom.get().byId('locationQuickDisplay');
+    const title = activePointOfInterest.sector.title + ': ' + activePointOfInterest.title;
+    if (title !== quickDisplay.title) {
+        quickDisplay.title = title;
+        bootstrap.Tooltip.getInstance(quickDisplay).setContent({'.tooltip-inner': quickDisplay.title});
+    }
+    const domGetter = Dom.get(quickDisplay);
+    domGetter.byClass('sector').textContent = activePointOfInterest.sector.title;
+    domGetter.byClass('pointOfInterest').textContent = activePointOfInterest.title;
+}
+
+/**
+ *
+ * @param {HTMLElement} progressFillElement
+ * @param {number} progress between 0.0 and 1.0
+ * @param {boolean} increasing set to false if it's not a progress bar but a regress bar
+ *
+ * @return {number} clamped progress value.
+ */
+function setProgress(progressFillElement, progress, increasing = true) {
+    // Clamp value to [0.0, 1.0]
+    progress = Math.max(0.0, Math.min(progress, 1.0));
+    XFastdom.mutate(() => {
+        // Make sure to disable the transition if the progress is being reset
+        const previousProgress = parseFloat(progressFillElement.dataset.progress);
+        if ((increasing && (previousProgress - progress) >= 0.01) ||
+            (!increasing && (progress - previousProgress) >= 0.01)
+        ) {
+            progressFillElement.style.transitionDuration = '0s';
+        } else {
+            progressFillElement.style.removeProperty('transition-duration');
+        }
+        progressFillElement.style.width = (progress * 100) + '%';
+    });
+
+    return progress;
+}
+
+/**
+ * @param {RequirementLike[]|null} unfulfilledRequirements
+ * @param {{
+ *     hasUnfulfilledRequirements: boolean,
+ *     requirementsElement: HTMLElement,
+ *     setHtmlCache: function(string),
+ *     getHtmlCache: function(): string,
+ * }} context
+ * @return {boolean} true if the entity is available, false if not
+ */
+function updateRequirements(unfulfilledRequirements, context) {
+    // Block all following entities
+    // Only first requirement is shown
+    if (context.hasUnfulfilledRequirements) {
+        return false;
+    }
+
+    if (unfulfilledRequirements === null) {
+        return true;
+    }
+
+    const html = unfulfilledRequirements
+        .map(requirement => requirement.toHtml())
+        .filter(requirementString => requirementString !== null && requirementString.trim() !== '')
+        .join(', ');
+    // TODO pseudo-prerequisites
+    if (html === '') {
+        // Hack: don't use .hidden to not interfere with the rest of the requirements system
+        context.requirementsElement.style.display = 'none';
+    } else {
+        context.requirementsElement.style.removeProperty('display');
+        if (html !== context.getHtmlCache()) {
+            Dom.get(context.requirementsElement).byClass('rendered').innerHTML = html;
+            context.setHtmlCache(html);
+        }
+    }
+    context.hasUnfulfilledRequirements = true;
+
+    return false;
+}
+
+let moduleCategoryRequirementsHtmlCache = '';
+const moduleRequirementsHtmlCache = {};
+const moduleComponentRequirementsHtmlCache = {};
+const moduleOperationRequirementsHtmlCache = {};
+
+function updateModuleOperationRow(operation, operationRequirementsContext) {
+    const row = Dom.get().byId(operation.domId);
+
+    if (!updateRequirements(operation.getUnfulfilledRequirements(), operationRequirementsContext)) {
+        row.classList.add('hidden');
+        return;
+    }
+    row.classList.remove('hidden');
+
+    const domGetter = Dom.get(row);
+    formatValue(domGetter.bySelector('.level > data'), operation.level, {keepNumber: true});
+    formatValue(domGetter.bySelector('.xpGain > data'), operation.getXpGain());
+    formatValue(domGetter.bySelector('.xpLeft > data'), operation.getXpLeft());
+
+    const progressFillElement = domGetter.byClass('progressFill');
+    setProgress(progressFillElement, operation.xp / operation.getMaxXp());
+    progressFillElement.classList.toggle('current', operation.isActive('self'));
+
+    domGetter.byClass('effect').textContent = operation.getEffectDescription();
+    domGetter.byClass('gridLoad').classList.toggle('hidden', attributes.gridStrength.getValue() === 0);
+}
+
+function updateModuleComponentRow(component, componentRequirementsContext) {
+    const row = document.getElementById(component.domId);
+
+    if (!updateRequirements(component.getUnfulfilledRequirements(), componentRequirementsContext)) {
+        row.classList.add('hidden');
+        return;
+    }
+
+    row.classList.remove('hidden');
+
+    const domGetter = Dom.get(row);
+    domGetter.byClass('gridLoad').classList.toggle('hidden', attributes.gridStrength.getValue() === 0);
+
+    // noinspection JSUnusedGlobalSymbols
+    const operationRequirementsContext = {
+        hasUnfulfilledRequirements: false,
+        requirementsElement: Dom.get().byId('row_requirements_component_' + component.name),
+        setHtmlCache: (newValue) => {
+            moduleOperationRequirementsHtmlCache[component.name] = newValue;
+        },
+        getHtmlCache: () => {
+            if (moduleOperationRequirementsHtmlCache.hasOwnProperty(component.name)) {
+                return moduleOperationRequirementsHtmlCache[component.name];
+            }
+
+            return '';
+        },
+    };
+
+    for (const operation of component.operations) {
+        updateModuleOperationRow(operation, operationRequirementsContext);
+    }
+
+    operationRequirementsContext.requirementsElement.classList.toggle('hidden', !operationRequirementsContext.hasUnfulfilledRequirements);
+}
+
+function updateModuleRow(module, moduleRequirementsContext) {
+    const row = document.getElementById(module.domId);
+
+    if (!updateRequirements(module.getUnfulfilledRequirements(), moduleRequirementsContext)) {
+        row.classList.add('hidden');
+        return;
+    }
+
+    row.classList.remove('hidden');
+    const isActive = module.isActive();
+    row.classList.toggle('inactive', !isActive);
+
+    const domGetter = Dom.get(row);
+    const level2Header = domGetter.byClass('level2-header');
+    level2Header.classList.toggle('text-bg-light', isActive);
+    level2Header.classList.toggle('text-bg-dark', !isActive);
+
+    domGetter.byClass('moduleActivationSwitch').checked = module.isActive();
+    formatValue(domGetter.byClass('level'), module.getLevel());
+
+    const maxLevelElement = domGetter.byClass('maxLevel');
+    if (gameData.bossEncounterCount > 0) {
+        maxLevelElement.classList.remove('hidden');
+        formatValue(domGetter.bySelector('.maxLevel > data'), module.maxLevel, {keepNumber: true});
+    } else {
+        maxLevelElement.classList.add('hidden');
+    }
+
+    if (attributes.gridStrength.getValue() >= 1) {
+        domGetter.byClass('gridLoad').classList.remove('hidden');
+        formatValue(domGetter.bySelector('.gridLoad > data'), module.getGridLoad());
+    } else {
+        domGetter.byClass('gridLoad').classList.add('hidden');
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    const componentRequirementsContext = {
+        hasUnfulfilledRequirements: false,
+        requirementsElement: Dom.get().byId('row_requirements_module_' + module.name),
+        setHtmlCache: (newValue) => {
+            moduleComponentRequirementsHtmlCache[module.name] = newValue;
+        },
+        getHtmlCache: () => {
+            if (moduleComponentRequirementsHtmlCache.hasOwnProperty(module.name)) {
+                return moduleComponentRequirementsHtmlCache[module.name];
+            }
+
+            return '';
+        },
+    };
+
+    for (const component of module.components) {
+        updateModuleComponentRow(component, componentRequirementsContext);
+    }
+
+    componentRequirementsContext.requirementsElement.classList.toggle('hidden', !componentRequirementsContext.hasUnfulfilledRequirements);
+}
+
+function updateModuleCategoryRow(category, categoryRequirementsContext) {
+    const categoryRow = Dom.get().byId(category.domId);
+
+    const categoryAvailable = updateRequirements(category.getUnfulfilledRequirements(), categoryRequirementsContext);
+    if (!categoryAvailable) {
+        categoryRow.classList.add('hidden');
+        // continue;
+    }
+
+    categoryRow.classList.remove('hidden');
+
+    // noinspection JSUnusedGlobalSymbols
+    const moduleRequirementsContext = {
+        hasUnfulfilledRequirements: false,
+        requirementsElement: Dom.get().byId('row_requirements_category_' + category.name),
+        setHtmlCache: (newValue) => {
+            moduleRequirementsHtmlCache[category.name] = newValue;
+        },
+        getHtmlCache: () => {
+            if (moduleRequirementsHtmlCache.hasOwnProperty(category.name)) {
+                return moduleRequirementsHtmlCache[category.name];
+            }
+
+            return '';
+        },
+    };
+
+    for (const module of category.modules) {
+        updateModuleRow(module, moduleRequirementsContext);
+    }
+
+    moduleRequirementsContext.requirementsElement.classList.toggle('hidden', !moduleRequirementsContext.hasUnfulfilledRequirements);
+}
+
+function updateModulesUI() {
+    // noinspection JSUnusedGlobalSymbols
+    const categoryRequirementsContext = {
+        hasUnfulfilledRequirements: false,
+        requirementsElement: Dom.get().byId('row_requirements_moduleCategory'),
+        setHtmlCache: (newValue) => {
+            moduleCategoryRequirementsHtmlCache = newValue;
+        },
+        getHtmlCache: () => moduleCategoryRequirementsHtmlCache,
+    };
+    for (const key in moduleCategories) {
+        const category = moduleCategories[key];
+        updateModuleCategoryRow(category, categoryRequirementsContext);
+    }
+
+    categoryRequirementsContext.requirementsElement.classList.toggle('hidden', !categoryRequirementsContext.hasUnfulfilledRequirements);
+}
+
+
+/**
+ *
+ * @param visibleFactions
+ * @param battle
+ * @param visibleBattles
+ * @param maxBattles
+ * @return {RequirementLike|null}
+ */
+function getUnfulfilledBattleRequirements(visibleFactions, battle, visibleBattles, maxBattles) {
+    if (visibleFactions.hasOwnProperty(battle.faction.name)) {
+        return {
+            toHtml: () => {
+                return `${visibleFactions[battle.faction.name].title} defeated`;
+            },
+        };
+    }
+
+    if (visibleBattles < maxBattles.limit) {
+        // All good, no unfulfilled requirement
+        return null;
+    }
+
+    // The first and last maximumAvailableBattles are strings for special cases
+    if (isString(maxBattles.requirement)) {
+        return {
+            toHtml: () => {
+                return maxBattles.requirement;
+            },
+        };
+    }
+
+    // Let's get dirty for some nice UX
+    // If due to low research, only 1 battle can be shown, this battle explicitly mentioned
+    if (maxBattles.limit === 1) {
+        return {
+            toHtml: () => {
+                // Find the open battle by looking up the one value in the visible factions
+                return `${Object.values(visibleFactions)[0].title} defeated or ` +
+                    maxBattles.requirement.toHtml();
+            },
+        };
+    }
+
+    // There is more than 1 battle open but there could be more battles visible
+    return {
+        toHtml: () => {
+            return 'Win any open battle or ' + maxBattles.requirement.toHtml();
+        },
+    };
+}
+
+let battleRequirementsHtmlCache = '';
+
+function updateBattleRows() {
+    // Determine visibility
+    const maxBattles = maximumAvailableBattles(attributes.research.getValue());
+    let visibleBattles = 0;
+    const visibleFactions = {};
+    const bossRow = Dom.get().byId(bossBattle.domId);
+
+    // noinspection JSUnusedGlobalSymbols
+    const requirementsContext = {
+        hasUnfulfilledRequirements: false,
+        requirementsElement: Dom.get().byId('row_requirements_battle'),
+        setHtmlCache: (newValue) => {
+            battleRequirementsHtmlCache = newValue;
+        },
+        getHtmlCache: () => {
+            return battleRequirementsHtmlCache;
+        },
+    };
+
+    for (const key in battles) {
+        /** @type {Battle} */
+        const battle = battles[key];
+        const row = Dom.get().byId(battle.domId);
+
+        if (battle.isDone()) {
+            row.classList.add('hidden');
+            Dom.get().byId('row_done_' + battle.name).classList.remove('hidden');
+            continue;
+        }
+
+        Dom.get().byId('row_done_' + battle.name).classList.add('hidden');
+
+        const unfulfilledRequirement = getUnfulfilledBattleRequirements(visibleFactions, battle, visibleBattles, maxBattles);
+
+        if (!(battle instanceof BossBattle)) {
+            if (!updateRequirements(
+                unfulfilledRequirement === null ? null : [unfulfilledRequirement],
+                requirementsContext)
+            ) {
+                row.classList.add('hidden');
+                continue;
+            }
+
+            visibleBattles++;
+            visibleFactions[battle.faction.name] = battle;
+
+            row.classList.remove('hidden');
+        }
+
+        const domGetter = Dom.get(row);
+        formatValue(domGetter.bySelector('.level > data'), battle.getDisplayedLevel(), {keepNumber: true});
+        formatValue(domGetter.bySelector('.xpGain > data'), battle.getXpGain());
+        formatValue(domGetter.bySelector('.xpLeft > data'), battle.getXpLeft());
+
+        setBattleProgress(domGetter.byClass('progressBar'), battle);
+
+        const isActive = battle.isActive();
+        domGetter.byClass('progressFill').classList.toggle('current', isActive);
+
+        if (isBossBattleAvailable() &&
+            visibleBattles === bossBattle.distance
+        ) {
+            if (row.nextElementSibling !== bossRow) { // Do not update the DOM if not necessary
+                row.after(bossRow);
+            }
         }
     }
 
-    if (xpDict == {}) {
-        skillWithLowestMaxXp = gameData.taskData["Concentration"]
-        return
+    if (isBossBattleAvailable() && !bossBattle.isDone()) {
+        bossRow.classList.remove('hidden');
+        if (visibleBattles < bossBattle.distance) {
+            // There are fewer battles visible than the boss distance --> move boss in last position.
+            // Is the bossRow already the last element?
+            if (bossRow.nextElementSibling !== requirementsContext.requirementsElement) { // Do not update the DOM if not necessary
+                requirementsContext.requirementsElement.before(bossRow);
+            }
+        } else if (bossBattle.distance === 0) {
+            // Boss should be in first position.
+            // Is the bossRow already the first element?
+            if (bossRow.previousElementSibling !== null) { // Do not update the DOM if not necessary
+                Dom.get()
+                    .bySelector('#unfinishedBattles tbody.level4')
+                    .prepend(bossRow);
+            }
+        }
+    } else {
+        bossRow.classList.add('hidden');
     }
 
-    var skillName = getKeyOfLowestValueFromDict(xpDict)
-    skillWithLowestMaxXp = gameData.taskData[skillName]
+    requirementsContext.requirementsElement.classList.toggle('hidden', !requirementsContext.hasUnfulfilledRequirements);
 }
 
-function getKeyOfLowestValueFromDict(dict) {
-    var values = []
-    for (key in dict) {
-        var value = dict[key]
-        values.push(value)
+let sectorRequirementsHtmlCache = '';
+const pointOfInterestRequirementsHtmlCache = {};
+
+function updateSectorRows() {
+    // noinspection JSUnusedGlobalSymbols
+    const sectorRequirementsContext = {
+        hasUnfulfilledRequirements: false,
+        requirementsElement: Dom.get().byId('row_requirements_sector'),
+        setHtmlCache: (newValue) => {
+            sectorRequirementsHtmlCache = newValue;
+        },
+        getHtmlCache: () => sectorRequirementsHtmlCache,
+    };
+
+    for (const key in sectors) {
+        const sector = sectors[key];
+
+        const categoryAvailable = updateRequirements(sector.getUnfulfilledRequirements(), sectorRequirementsContext);
+        Dom.get().byId(sector.domId).classList.toggle('hidden', !categoryAvailable);
+
+        // noinspection JSUnusedGlobalSymbols
+        const requirementsContext = {
+            hasUnfulfilledRequirements: false,
+            requirementsElement: Dom.get().byId('row_requirements_sector_' + sector.name),
+            setHtmlCache: (newValue) => {
+                pointOfInterestRequirementsHtmlCache[sector.name] = newValue;
+            },
+            getHtmlCache: () => {
+                if (pointOfInterestRequirementsHtmlCache.hasOwnProperty(sector.name)) {
+                    return pointOfInterestRequirementsHtmlCache[sector.name];
+                }
+
+                return '';
+            },
+        };
+
+        for (const pointOfInterest of sector.pointsOfInterest) {
+            const row = Dom.get().byId(pointOfInterest.domId);
+
+            if (!updateRequirements(pointOfInterest.getUnfulfilledRequirements(), requirementsContext)) {
+                row.classList.add('hidden');
+                continue;
+            }
+            row.classList.remove('hidden');
+
+            const domGetter = Dom.get(row);
+            const isActive = pointOfInterest.isActive();
+            domGetter.byClass('point-of-interest').classList.toggle('current', isActive);
+            domGetter.byClass('effect').textContent = pointOfInterest.getEffectDescription();
+            formatValue(domGetter.bySelector('.danger > data'), pointOfInterest.getEffect(EffectType.Danger));
+        }
+
+        requirementsContext.requirementsElement.classList.toggle('hidden', !requirementsContext.hasUnfulfilledRequirements);
     }
 
-    values.sort(function(a, b){return a - b})
+    sectorRequirementsContext.requirementsElement.classList.toggle('hidden', !sectorRequirementsContext.hasUnfulfilledRequirements);
+}
 
-    for (key in dict) {
-        var value = dict[key]
-        if (value == values[0]) {
-            return key
+function updateGalacticSecretRows() {
+    for (const key in galacticSecrets) {
+        const galacticSecret = galacticSecrets[key];
+        const row = Dom.get().byId(galacticSecret.domId);
+        const domGetter = Dom.get(row);
+        const isUnlocked = galacticSecret.isUnlocked;
+        const progressBarElement = domGetter.byClass('progressBar');
+        const progressFillElement = domGetter.byClass('progressFill');
+        if (isUnlocked) {
+            progressFillElement.classList.add('unlocked');
+            progressBarElement.classList.add('unlocked');
+            progressBarElement.classList.remove('clickable');
+            progressFillElement.style.removeProperty('width');
+        } else {
+            progressFillElement.classList.toggle('unlocked', galacticSecret.inProgress);
+            progressBarElement.classList.remove('unlocked');
+            progressBarElement.classList.add('clickable');
+            setProgress(progressFillElement, galacticSecret.unlockProgress);
         }
     }
 }
 
-function autoLearn() {
-    if (!autoLearnElement.checked || !skillWithLowestMaxXp) return
-    gameData.currentSkill = skillWithLowestMaxXp
+function updateAttributeRows() {
+    for (const balanceEntry of attributeBalanceEntries) {
+        if (balanceEntry.isActive()) {
+            formatValue(
+                Dom.get(balanceEntry.element).byClass('entryValue'),
+                balanceEntry.getEffect(balanceEntry.effectType),
+            );
+            balanceEntry.element.classList.remove('hidden');
+        } else {
+            balanceEntry.element.classList.add('hidden');
+        }
+    }
+
+    for (const balanceEntry of gridLoadBalanceEntries) {
+        balanceEntry.element.classList.toggle('hidden', !balanceEntry.isActive());
+    }
 }
 
-function yearsToDays(years) {
-    var days = years * 365
-    return days
-}
- 
-function getDay() {
-    var day = Math.floor(gameData.days - daysToYears(gameData.days) * 365)
-    return day
-}
-
-function increaseDays() {
-    var increase = applySpeed(1)
-    gameData.days += increase
+/**
+ *
+ * @param {number} amount
+ * @param {HTMLDataElement} dataElement
+ * @param {{prefixes?: string[], unit?: string, forceSign?: boolean}} formatConfig
+ */
+function formatEnergyValue(amount, dataElement, formatConfig = {}) {
+    formatValue(dataElement, amount, Object.assign({
+        unit: units.energy,
+        prefixes: metricPrefixes,
+    }, formatConfig));
 }
 
-function format(number) {
+function updateEnergyGridBar() {
+    const energyDisplayElement = Dom.get().byId('energyGridDisplay');
+    const domGetter = Dom.get(energyDisplayElement);
+
+    const currentGridLoad = attributes.gridLoad.getValue();
+    const currentGridStrength = attributes.gridStrength.getValue();
+    const gridLoadElement = domGetter.byClass('gridLoad');
+    const gridStrengthElement = domGetter.byClass('gridStrength');
+    if (currentGridLoad === 0) {
+        gridLoadElement.style.left = '0';
+        gridLoadElement.style.removeProperty('translate');
+        gridLoadElement.style.removeProperty('right');
+    } else if (currentGridLoad === 1 && currentGridStrength === 1) {
+        gridLoadElement.style.left = '50%';
+        gridLoadElement.style.translate = '-50% 0';
+        gridLoadElement.style.removeProperty('right');
+    } else {
+        // Using right alignment to respect the gridStrength element
+        const rightLimit = gridStrengthElement.offsetWidth;
+        const relativeGridLoad = 100 * (1 - currentGridLoad / currentGridStrength);
+        gridLoadElement.style.right = `max(${relativeGridLoad}%, ${rightLimit}px)`;
+        gridLoadElement.style.removeProperty('translate');
+        gridLoadElement.style.removeProperty('left');
+    }
+
+    formatValue(Dom.get(gridLoadElement).bySelector('data'), currentGridLoad, {keepNumber: true});
+    formatValue(Dom.get(gridStrengthElement).bySelector('data'), currentGridStrength, {keepNumber: true});
+
+    const numberOfBoxes = Dom.get().allBySelector('#gridStrength > .grid-strength-box').length;
+    if (numberOfBoxes > currentGridStrength) {
+        for (let i = 0; i < (numberOfBoxes - currentGridStrength); i++) {
+            Dom.get().bySelector('#gridStrength .grid-strength-box').remove();
+        }
+    } else if (currentGridStrength > numberOfBoxes) {
+        for (let i = numberOfBoxes; i < currentGridStrength; i++) {
+            const gridStrengthBox = Dom.new.fromTemplate('gridStrengthBoxTemplate');
+            Dom.get().byId('gridStrength').append(gridStrengthBox);
+        }
+    }
+
+    Dom.get().allBySelector('#gridStrength > .grid-strength-box').forEach((gridStrengthBox, index) => {
+        gridStrengthBox.classList.toggle('in-use', index < currentGridLoad);
+    });
+
+    const energyGeneratedElement = domGetter.byClass('energyGenerated');
+    formatEnergyValue(gridStrength.getXpGain(), Dom.get(energyGeneratedElement).bySelector('data'), {forceSign: true});
+    const energyLeftElement = domGetter.byClass('energyLeft');
+    formatEnergyValue(gridStrength.getXpLeft(), Dom.get(energyLeftElement).bySelector('data'));
+
+    const progressFillElement = domGetter.byClass('progressFill');
+    progressFillElement.classList.toggle('current', getGeneratedEnergy() > 0);
+    const energyProgress = setProgress(progressFillElement, gridStrength.xp / gridStrength.getMaxXp());
+
+    // Using right alignment to respect the energyLeft element
+    const relativeEnergy = 100 * (1 - energyProgress);
+    const leftLimit = energyGeneratedElement.offsetWidth + (gameData.settings.sciFiMode ? 30 : 0);
+    const rightLimit = energyLeftElement.offsetWidth;
+    energyGeneratedElement.style.right = `clamp(${rightLimit}px, ${relativeEnergy}%, calc(100% - ${leftLimit}px))`;
+}
+
+function updateStationOverview() {
+    const cyclesSinceLastEncounterElement = Dom.get().byId('cyclesSinceLastEncounter');
+    const cyclesTotalElement = Dom.get().byId('cyclesTotal');
+    if (gameData.bossEncounterCount === 0) {
+        cyclesSinceLastEncounterElement.classList.add('hidden');
+        cyclesTotalElement.classList.replace('secondary-stat', 'primary-stat');
+        cyclesTotalElement.classList.remove('help-text');
+    } else {
+        cyclesSinceLastEncounterElement.classList.remove('hidden');
+        // TODO adjust formatting & use formatValue
+        Dom.get(cyclesSinceLastEncounterElement).bySelector('data').textContent = formatNumber(Math.floor(gameData.cycles));
+        cyclesTotalElement.classList.replace('primary-stat', 'secondary-stat');
+        cyclesTotalElement.classList.add('help-text');
+    }
+    // TODO adjust formatting & use formatValue
+    Dom.get(cyclesTotalElement).bySelector('data').textContent = formatNumber(Math.floor(startCycle + gameData.totalCycles));
+
+    const pauseButton = document.getElementById('pauseButton');
+    if (gameData.state === gameStates.PAUSED || gameData.state === gameStates.BOSS_FIGHT_PAUSED) {
+        pauseButton.textContent = 'Play';
+        pauseButton.classList.remove('btn-pause', 'btn-intermission');
+        pauseButton.classList.add('btn-play');
+        pauseButton.disabled = false;
+    } else if (gameData.state === gameStates.PLAYING || gameData.state === gameStates.BOSS_FIGHT) {
+        pauseButton.textContent = 'Pause';
+        pauseButton.classList.remove('btn-play', 'btn-intermission');
+        pauseButton.classList.add('btn-pause');
+        pauseButton.disabled = false;
+    } else {
+        pauseButton.textContent = 'Intermission';
+        pauseButton.classList.remove('btn-pause', 'btn-play');
+        pauseButton.classList.add('btn-intermission');
+        pauseButton.disabled = true;
+    }
+
+    const danger = attributes.danger.getValue();
+    formatValue(Dom.get().byId('dangerDisplay'), danger);
+    formatValue(Dom.get().bySelector('#attributeRows > .danger > .value > data'), danger);
+
+    updateEnergyGridBar();
+    formatValue(Dom.get().bySelector('#attributeRows > .gridLoad > .value > data'), attributes.gridLoad.getValue());
+    formatValue(Dom.get().bySelector('#attributeRows > .gridStrength > .value > data'), attributes.gridStrength.getValue());
+    const delta = gridStrength.getDelta();
+    const gridStrengthDeltaElement = Dom.get().bySelector('#attributeRows > .gridStrength .delta');
+    if (delta < 0.1) {
+        formatValue(gridStrengthDeltaElement, 1, {forceInteger: true});
+        gridStrengthDeltaElement.nextSibling.textContent = ' per ' + (1 / delta).toFixed(0) + ' cycles';
+    } else {
+        formatValue(gridStrengthDeltaElement, delta);
+        gridStrengthDeltaElement.nextSibling.textContent = ' per cycle';
+    }
+
+    const growth = attributes.growth.getValue();
+    formatValue(Dom.get().byId('growthDisplay'), growth);
+    formatValue(Dom.get().bySelector('#attributeRows > .growth > .value > data'), growth);
+
+    const heat = attributes.heat.getValue();
+    formatValue(Dom.get().byId('heatDisplay'), heat, {forceInteger: true});
+    formatValue(Dom.get().bySelector('#attributeRows > .heat > .value > data'), heat);
+
+    const industry = attributes.industry.getValue();
+    formatValue(Dom.get().byId('industryDisplay'), industry);
+    formatValue(Dom.get().bySelector('#attributeRows > .industry > .value > data'), industry);
+
+    const military = attributes.military.getValue();
+    formatValue(Dom.get().byId('militaryDisplay'), military);
+    formatValue(Dom.get().bySelector('#attributeRows > .military > .value > data'), military);
+
+    const population = attributes.population.getValue();
+    formatValue(Dom.get().byId('populationDisplay'), population, {forceInteger: true});
+    formatValue(Dom.get().byId('populationProgressSpeedDisplay'), getPopulationProgressSpeedMultiplier(), {});
+    formatValue(Dom.get().bySelector('#attributeRows > .population > .value > data'), population, {forceInteger: true});
+    formatValue(Dom.get().bySelector('#attributeRows > .population .delta'), populationDelta(), {forceSign: true});
+
+    const research = attributes.research.getValue();
+    formatValue(Dom.get().byId('researchDisplay'), research);
+    formatValue(Dom.get().bySelector('#attributeRows > .research > .value > data'), research);
+
+    const essenceOfUnknown = attributes.essenceOfUnknown.getValue();
+    formatValue(Dom.get().byId('essenceOfUnknownDisplay'), essenceOfUnknown, {forceInteger: true, keepNumber: true});
+
+    const galacticSecretCost = calculateGalacticSecretCost();
+    formatValue(Dom.get().byId('galacticSecretCostDisplay'), galacticSecretCost, {forceInteger: true, keepNumber: true});
+
+    // Only shot the attributes display as a shortcut link if the attributes tab is actually available
+    Dom.get().byId('attributesDisplay').classList.toggle('shortcut', !tabButtons['attributes'].classList.contains('hidden'));
+}
+
+const htmlElementRequirementsHtmlCache = {};
+
+function updateHtmlElementRequirements() {
+    for (const key in htmlElementRequirements) {
+        const htmlElementWithRequirement = htmlElementRequirements[key];
+        const completed = htmlElementWithRequirement.isCompleted();
+        const visible = htmlElementWithRequirement.isVisible();
+        for (const element of htmlElementWithRequirement.elementsWithRequirements) {
+            if (element instanceof LazyHtmlElement) {
+                if (element.found()) {
+                    element.get().classList.toggle('hidden', !completed);
+                }
+            } else if (element instanceof LazyHtmlElementCollection) {
+                if (element.found()) {
+                    element.get().forEach(element => {
+                        element.classList.toggle('hidden', !completed);
+                    });
+                }
+            } else {
+                element.classList.toggle('hidden', !completed);
+            }
+        }
+
+        if (completed || !visible) {
+            for (const element of htmlElementWithRequirement.elementsToShowRequirements) {
+                element.classList.add('hidden');
+            }
+        } else {
+            const requirementHtml = htmlElementWithRequirement.toHtml();
+            let updateInnerHtml = false;
+            if (!htmlElementRequirementsHtmlCache.hasOwnProperty(key) ||
+                requirementHtml !== htmlElementRequirementsHtmlCache[key]
+            ) {
+                updateInnerHtml = true;
+                htmlElementRequirementsHtmlCache[key] = requirementHtml;
+            }
+
+            for (const element of htmlElementWithRequirement.elementsToShowRequirements) {
+                element.classList.remove('hidden');
+                if (updateInnerHtml) {
+                    element.innerHTML = requirementHtml;
+                }
+            }
+        }
+    }
+}
+
+function updateBodyClasses() {
+    document.getElementById('body').classList.toggle('game-paused', gameData.state === gameStates.PAUSED);
+    document.getElementById('body').classList.toggle('game-playing', gameData.state === gameStates.PLAYING);
+}
+
+function doTasks() {
+    for (const key of gameData.activeEntities.operations) {
+        const operation = moduleOperations[key];
+        if (!operation.isActive('parent')) continue;
+        operation.do();
+    }
+
+    for (const battleName of gameData.activeEntities.battles) {
+        const battle = battles[battleName];
+        if (battle.isDone()) {
+            if (gameData.selectedTab === 'battles') {
+                // Quality of life - a battle is done and the player is already on the battles tab
+                // or visited it first after the battle was completed --> deactivate battle
+                battle.stop();
+                // TODO VFX should not be called, but triggered via Event
+                VFX.flash(Dom.get().bySelector('#row_done_' + battle.name + ' .progressBar'));
+            }
+
+            continue;
+        }
+
+        battle.do();
+        if (gameData.state === gameStates.PLAYING &&
+            isBossBattleAvailable() &&
+            battle.isDone()
+        ) {
+            bossBattle.decrementDistance();
+        }
+    }
+
+    gridStrength.do();
+}
+
+function getGeneratedEnergy() {
+    return Effect.getTotalValue([EffectType.Energy, EffectType.EnergyFactor]);
+}
+
+function calculateGridLoad() {
+    let gridLoad = 0;
+
+    for (const key of gameData.activeEntities.operations) {
+        const operation = moduleOperations[key];
+        if (!operation.isActive('parent')) continue;
+
+        gridLoad += operation.getGridLoad();
+    }
+
+    return gridLoad;
+}
+
+function calculateGalacticSecretCost() {
+    const unlockedGalacticSecrets = Object.values(galacticSecrets)
+        .filter(galacticSecret => galacticSecret.isUnlocked)
+        .length;
+    return Math.pow(3, unlockedGalacticSecrets);
+}
+
+function increaseCycle() {
+    if (!gameData.state.isTimeProgressing) return;
+
+    const increase = applySpeed(1);
+    gameData.cycles += increase;
+    gameData.totalCycles += increase;
+
+    if (!isBossBattleAvailable() && gameData.cycles >= getBossAppearanceCycle()) {
+        gameData.bossBattleAvailable = true;
+        gameData.transitionState(gameStates.PAUSED);
+        GameEvents.BossAppearance.trigger(undefined);
+    }
+}
+
+function updateBossDistance() {
+    if (gameData.state !== gameStates.PLAYING) return;
+    if (!isBossBattleAvailable()) return;
+
+    // How much time has past since the boss' arrival?
+    const overtime = gameData.cycles - getBossAppearanceCycle();
+    // Translate the elapsed time into distance according to config
+    bossBattle.coveredDistance = Math.floor(overtime / bossBattleApproachInterval);
+}
+
+function visuallyDenyGalacticSecretUnlock(galacticSecret) {
+    VFX.shakeElement(Dom.get().bySelector(`#${galacticSecret.domId} .progress`), galacticSecret.domId);
+    VFX.highlightText(Dom.get().byId('galacticSecretCostDisplay').parentElement, 'flash-text-denied', 'flash-text-denied');
+    VFX.highlightText(Dom.get().byId('essenceOfUnknownDisplay'), 'flash-text-denied', 'flash-text-denied');
+}
+
+function progressGalacticSecrets() {
+    for (const key in galacticSecrets) {
+        const galacticSecret = galacticSecrets[key];
+        galacticSecret.update();
+        if (galacticSecret.unlockProgress < 1) {
+            continue;
+        }
+
+        const galacticSecretCost = calculateGalacticSecretCost();
+        if (galacticSecretCost > gameData.essenceOfUnknown) {
+            visuallyDenyGalacticSecretUnlock(galacticSecret);
+        } else {
+            // Unlock & pay the required essence of unknown
+            galacticSecret.isUnlocked = true;
+            galacticSecret.inProgress = false;
+            gameData.essenceOfUnknown -= galacticSecretCost;
+            GameEvents.TaskLevelChanged.trigger({
+                type: galacticSecret.type,
+                name: galacticSecret.name,
+                previousLevel: 0,
+                nextLevel: 1,
+            });
+        }
+        galacticSecret.unlockProgress = 0;
+    }
+}
+
+/**
+ * Activate the first/saved operation of any component that doesn't
+ * have yet an active operation, e.g. because it was blocked.
+ */
+function activateComponentOperations() {
+    for (const key in moduleComponents) {
+        const component = moduleComponents[key];
+
+        if (component.getUnfulfilledRequirements() !== null) continue;
+        if (component.getActiveOperation() !== null) continue;
+
+        // TODO include in save game?
+        let activeOperation = component.operations.find(operation => operation.isActive('self'));
+        // No operation was active yet --> fall back to first configured operation as fallback
+        if (isUndefined(activeOperation)) {
+            activeOperation = component.operations[0];
+            activeOperation.setActive(true);
+        }
+        component.activeOperation = activeOperation;
+    }
+}
+
+/**
+ *
+ * @param {HTMLDataElement} dataElement
+ * @param {number} value
+ * @param {{
+ *     prefixes?: string[],
+ *     unit?: string,
+ *     forceSign?: boolean,
+ *     keepNumber?: boolean,
+ *     forceInteger?: boolean,
+ *     toStringFn?: function(number): string,
+ * }} config
+ */
+function formatValue(dataElement, value, config = {}) {
+    // TODO render full number + unit into dataElement.title
+    dataElement.value = String(value);
+
+    const defaultConfig = {
+        prefixes: magnitudes,
+        unit: '',
+        forceSign: false,
+        keepNumber: false,
+        forceInteger: false,
+        toStringFn: undefined,
+    };
+    config = Object.assign({}, defaultConfig, config);
+
+    const toString = (value) => {
+        if (config.forceInteger || Number.isInteger(value)) {
+            return value.toFixed(0);
+        } else if (isFunction(config.toStringFn)) {
+            return config.toStringFn(value);
+        } else if (Math.abs(value) < 1) {
+            return value.toFixed(2);
+        } else {
+            return value.toPrecision(3);
+        }
+    };
 
     // what tier? (determines SI symbol)
-    var tier = Math.log10(number) / 3 | 0;
+    const tier = Math.max(0, Math.log10(Math.abs(value)) / 3 | 0);
 
-    // if zero, we don't need a suffix
-    if(tier == 0) return number;
+    let prefix = '';
+    if (config.forceSign) {
+        if (Math.abs(value) <= 0.001) {
+            prefix = '±';
+            value = Math.abs(value);
+        } else if (value > 0) {
+            prefix = '+';
+        }
+    }
+
+    if (config.keepNumber) {
+        dataElement.textContent = prefix + value;
+        delete dataElement.dataset.unit;
+        return;
+    }
 
     // get suffix and determine scale
-    var suffix = units[tier];
-    var scale = Math.pow(10, tier * 3);
+    let suffix = config.prefixes[tier];
+    if (typeof config.unit === 'string' && config.unit.length > 0) {
+        dataElement.dataset.unit = suffix + config.unit;
+    } else if (suffix.length > 0) {
+        dataElement.dataset.unit = suffix;
+    } else {
+        delete dataElement.dataset.unit;
+    }
+
+    if (tier === 0) {
+        dataElement.textContent = prefix + toString(value);
+        return;
+    }
+    const scale = Math.pow(10, tier * 3);
 
     // scale the number
-    var scaled = number / scale;
+    const scaled = value / scale;
 
     // format number and add suffix
-    return scaled.toFixed(1) + suffix;
+    dataElement.textContent = prefix + toString(scaled);
 }
 
-function formatCoins(coins, element) {
-    var tiers = ["p", "g", "s"]
-    var colors = {
-        "p": "#79b9c7",
-        "g": "#E5C100",
-        "s": "#a8a8a8",
-        "c": "#a15c2f"
+function getModuleOperationElement(operationName) {
+    if (!moduleOperations.hasOwnProperty(operationName)) {
+        console.log('ModuleOperation not found in data: ' + operationName);
+        return null;
     }
-    var leftOver = coins
-    var i = 0
-    for (tier of tiers) {
-        var x = Math.floor(leftOver / Math.pow(10, (tiers.length - i) * 2))
-        var leftOver = Math.floor(leftOver - x * Math.pow(10, (tiers.length - i) * 2))
-        var text = format(String(x)) + tier + " "
-        element.children[i].textContent = x > 0 ? text : ""
-        element.children[i].style.color = colors[tier]
-        i += 1
+    const task = moduleOperations[operationName];
+    return document.getElementById(task.domId);
+}
+
+function getBattleElement(taskName) {
+    if (!battles.hasOwnProperty(taskName)) {
+        console.log('Battle not found in data: ' + taskName);
+        return;
     }
-    if (leftOver == 0 && coins > 0) {element.children[3].textContent = ""; return}
-    var text = String(Math.floor(leftOver)) + "c"
-    element.children[3].textContent = text
-    element.children[3].style.color = colors["c"]
+    const battle = battles[taskName];
+    return Dom.get().byId(battle.domId);
 }
 
-function getTaskElement(taskName) {
-    var task = gameData.taskData[taskName]
-    var element = document.getElementById(task.id)
-    return element
-}
-
-function getItemElement(itemName) {
-    var item = gameData.itemData[itemName]
-    var element = document.getElementById(item.id)
-    return element
-}
-
-function getElementsByClass(className) {
-    var elements = document.getElementsByClassName(removeSpaces(className))
-    return elements
-}
-
-function setLightDarkMode() {
-    var body = document.getElementById("body")
-    body.classList.contains("dark") ? body.classList.remove("dark") : body.classList.add("dark")
-}
-
-function removeSpaces(string) {
-    var string = string.replace(/ /g, "")
-    return string
-}
-
-function rebirthOne() {
-    gameData.rebirthOneCount += 1
-
-    rebirthReset()
-}
-
-function rebirthTwo() {
-    gameData.rebirthTwoCount += 1
-    gameData.evil += getEvilGain()
-
-    rebirthReset()
-
-    for (taskName in gameData.taskData) {
-        var task = gameData.taskData[taskName]
-        task.maxLevel = 0
-    }    
-}
-
-function rebirthReset() {
-    setTab(jobTabButton, "jobs")
-
-    gameData.coins = 0
-    gameData.days = 365 * 14
-    gameData.currentJob = gameData.taskData["Beggar"]
-    gameData.currentSkill = gameData.taskData["Concentration"]
-    gameData.currentProperty = gameData.itemData["Homeless"]
-    gameData.currentMisc = []
-
-    for (taskName in gameData.taskData) {
-        var task = gameData.taskData[taskName]
-        if (task.level > task.maxLevel) task.maxLevel = task.level
-        task.level = 0
-        task.xp = 0
+function getPointOfInterestElement(name) {
+    if (!pointsOfInterest.hasOwnProperty(name)) {
+        console.log('Point of Interest not found in data: ' + name);
+        return null;
     }
 
-    for (key in gameData.requirements) {
-        var requirement = gameData.requirements[key]
-        if (requirement.completed && permanentUnlocks.includes(key)) continue
-        requirement.completed = false
-    }
+    const pointOfInterest = pointsOfInterest[name];
+    return document.getElementById(pointOfInterest.domId);
 }
 
-function getLifespan() {
-    var immortality = gameData.taskData["Immortality"]
-    var superImmortality = gameData.taskData["Super immortality"]
-    var lifespan = baseLifespan * immortality.getEffect() * superImmortality.getEffect()
-    return lifespan
+/**
+ * @param {boolean} force
+ */
+function toggleVfxFollowProgressBars(force = undefined) {
+    if (force === undefined) {
+        gameData.settings.vfx.followProgressBars = !gameData.settings.vfx.followProgressBars;
+    } else {
+        gameData.settings.vfx.followProgressBars = force;
+    }
+    VFX.followProgressBars(gameData.settings.vfx.followProgressBars);
+    gameData.save();
 }
 
-function isAlive() {
-    var condition = gameData.days < getLifespan()
-    var deathText = document.getElementById("deathText")
-    if (!condition) {
-        gameData.days = getLifespan()
-        deathText.classList.remove("hidden")
+/**
+ * @param {boolean} force
+ */
+function toggleLightDarkMode(force = undefined) {
+    if (force === undefined) {
+        gameData.settings.darkMode = !gameData.settings.darkMode;
+    } else {
+        gameData.settings.darkMode = force;
     }
-    else {
-        deathText.classList.add("hidden")
-    }
-    return condition
+    document.documentElement.dataset['bsTheme'] = gameData.settings.darkMode ? 'dark' : 'light';
+    gameData.save();
 }
 
-function assignMethods() {
+/**
+ * @param {boolean} force
+ */
+function toggleSciFiMode(force = undefined) {
+    const body = document.getElementById('body');
+    gameData.settings.sciFiMode = body.classList.toggle('sci-fi', force);
+    gameData.save();
+}
 
-    for (key in gameData.taskData) {
-        var task = gameData.taskData[key]
-        if (task.baseData.income) {
-            task.baseData = jobBaseData[task.name]
-            task = Object.assign(new Job(jobBaseData[task.name]), task)
-            
-        } else {
-            task.baseData = skillBaseData[task.name]
-            task = Object.assign(new Skill(skillBaseData[task.name]), task)
-        } 
-        gameData.taskData[key] = task
-    }
-
-    for (key in gameData.itemData) {
-        var item = gameData.itemData[key]
-        item.baseData = itemBaseData[item.name]
-        item = Object.assign(new Item(itemBaseData[item.name]), item)
-        gameData.itemData[key] = item
-    }
-
-    for (key in gameData.requirements) {
-        var requirement = gameData.requirements[key]
-        if (requirement.type == "task") {
-            requirement = Object.assign(new TaskRequirement(requirement.elements, requirement.requirements), requirement)
-        } else if (requirement.type == "coins") {
-            requirement = Object.assign(new CoinRequirement(requirement.elements, requirement.requirements), requirement)
-        } else if (requirement.type == "age") {
-            requirement = Object.assign(new AgeRequirement(requirement.elements, requirement.requirements), requirement)
-        } else if (requirement.type == "evil") {
-            requirement = Object.assign(new EvilRequirement(requirement.elements, requirement.requirements), requirement)
+function setBackground(background) {
+    const body = document.getElementById('body');
+    body.classList.forEach((cssClass, index, classList) => {
+        if (cssClass.startsWith('background-')) {
+            classList.remove(cssClass);
         }
+    });
 
-        var tempRequirement = tempData["requirements"][key]
-        requirement.elements = tempRequirement.elements
-        requirement.requirements = tempRequirement.requirements
-        gameData.requirements[key] = requirement
-    }
-
-    gameData.currentJob = gameData.taskData[gameData.currentJob.name]
-    gameData.currentSkill = gameData.taskData[gameData.currentSkill.name]
-    gameData.currentProperty = gameData.itemData[gameData.currentProperty.name]
-    var newArray = []
-    for (misc of gameData.currentMisc) {
-        newArray.push(gameData.itemData[misc.name])
-    }
-    gameData.currentMisc = newArray
+    body.classList.add('background-' + background);
+    document.querySelector(`.background-${background} > input[type="radio"]`).checked = true;
+    gameData.settings.background = background;
+    gameData.save();
 }
 
-function replaceSaveDict(dict, saveDict) {
-    for (key in dict) {
-        if (!(key in saveDict)) {
-            saveDict[key] = dict[key]
-        } else if (dict == gameData.requirements) {
-            if (saveDict[key].type != tempData["requirements"][key].type) {
-                saveDict[key] = tempData["requirements"][key]
-            }
-        }
-    }
-
-    for (key in saveDict) {
-        if (!(key in dict)) {
-            delete saveDict[key]
-        }
-    }
+function resetBattle(name) {
+    const battle = battles[name];
+    battle.level = 0;
+    battle.xp = 0;
 }
 
-function saveGameData() {
-    localStorage.setItem("gameDataSave", JSON.stringify(gameData))
-}
+function startNewPlaythrough() {
+    gameData.bossEncounterCount += 1;
 
-function loadGameData() {
-    var gameDataSave = JSON.parse(localStorage.getItem("gameDataSave"))
-
-    if (gameDataSave !== null) {
-        replaceSaveDict(gameData, gameDataSave)
-        replaceSaveDict(gameData.requirements, gameDataSave.requirements)
-        replaceSaveDict(gameData.taskData, gameDataSave.taskData)
-        replaceSaveDict(gameData.itemData, gameDataSave.itemData)
-
-        gameData = gameDataSave
+    // grant Essence Of Unknown
+    for (let level = 0; level < bossBattle.level; level++) {
+        gameData.essenceOfUnknown += Math.pow(2, level);
     }
 
-    assignMethods()
+    playthroughReset('UPDATE_MAX_LEVEL');
+}
+
+// function rebirthTwo() {
+//     gameData.rebirthTwoCount += 1;
+//     playthroughReset('RESET_MAX_LEVEL');
+// }
+
+/**
+ * @param {MaxLevelBehavior} maxLevelBehavior
+ */
+function playthroughReset(maxLevelBehavior) {
+    gameData.initValues();
+    gameData.resetCurrentValues();
+
+    for (const key in moduleCategories) {
+        const category = moduleCategories[key];
+        category.reset(maxLevelBehavior);
+    }
+
+    for (const key in modules) {
+        const module = modules[key];
+        module.reset(maxLevelBehavior);
+    }
+
+    for (const key in moduleComponents) {
+        const component = moduleComponents[key];
+        component.reset(maxLevelBehavior);
+    }
+
+    for (const key in moduleOperations) {
+        const operation = moduleOperations[key];
+        operation.reset(maxLevelBehavior);
+    }
+
+    gridStrength.reset(maxLevelBehavior);
+
+    for (const key in battles) {
+        const battle = battles[key];
+        battle.reset(maxLevelBehavior);
+    }
+
+    for (const key in moduleCategories) {
+        const category = moduleCategories[key];
+        category.reset(maxLevelBehavior);
+    }
+
+    for (const key in sectors) {
+        const sector = sectors[key];
+        sector.reset(maxLevelBehavior);
+    }
+
+    for (const key in pointsOfInterest) {
+        const pointOfInterest = pointsOfInterest[key];
+        pointOfInterest.reset(maxLevelBehavior);
+    }
+
+    for (const key in htmlElementRequirements) {
+        const elementRequirement = htmlElementRequirements[key];
+        elementRequirement.reset();
+    }
+
+    setTab('modules');
+    gameData.transitionState(gameStates.NEW);
+}
+
+function getBossAppearanceCycle() {
+    //Lifespan not defined in station design, if years are not reset this will break the game
+    //const immortality = gameData.taskData['Immortality'];
+    //const superImmortality = gameData.taskData['Super immortality'];
+    //return bossAppearanceCycle * immortality.getEffect() * superImmortality.getEffect();
+    return bossAppearanceCycle;
+}
+
+function isBossBattleAvailable() {
+    return gameData.bossBattleAvailable;
 }
 
 function updateUI() {
-    updateTaskRows()
-    updateItemRows()
-    updateRequiredRows(gameData.taskData, jobCategories)
-    updateRequiredRows(gameData.taskData, skillCategories)
-    updateRequiredRows(gameData.itemData, itemCategories)
-    updateHeaderRows(jobCategories)
-    updateHeaderRows(skillCategories)
-    updateQuickTaskDisplay("job")
-    updateQuickTaskDisplay("skill")
-    hideEntities()
-    updateText()  
+    if (document.hidden) {
+        // Tab is currently not active - no need to update the UI
+        return;
+    }
+
+    updateModulesUI();
+
+    updateBattleRows();
+    updateSectorRows();
+    updateGalacticSecretRows();
+
+    updateModulesQuickDisplay();
+    updateBattlesQuickDisplay();
+    updateLocationQuickDisplay();
+    updateAttributeRows();
+
+    updateHtmlElementRequirements();
+
+    updateStationOverview();
+    updateBodyClasses();
 }
 
 function update() {
-    increaseDays()
-    autoPromote()
-    autoLearn()
-    doCurrentTask(gameData.currentJob)
-    doCurrentTask(gameData.currentSkill)
-    applyExpenses()
-    updateUI()
+    increaseCycle();
+    updateBossDistance();
+    progressGalacticSecrets();
+    activateComponentOperations();
+    doTasks();
+    updatePopulation();
+    updateUI();
 }
 
-function resetGameData() {
-    localStorage.clear()
-    location.reload()
+function rerollStationName() {
+    setStationName(stationNameGenerator.generate());
 }
 
-function importGameData() {
-    var importExportBox = document.getElementById("importExportBox")
-    var data = JSON.parse(window.atob(importExportBox.value))
-    gameData = data
-    saveGameData()
-    location.reload()
+const visibleTooltips = [];
+
+/**
+ *
+ * @param {HTMLElement} tooltipTriggerElement
+ * @param {Object} tooltipConfig
+ */
+function initTooltip(tooltipTriggerElement, tooltipConfig) {
+    const mergedTooltipConfig = Object.assign({container: 'body', trigger: 'hover', sanitize: false}, tooltipConfig);
+    // noinspection JSUnresolvedReference
+    new bootstrap.Tooltip(tooltipTriggerElement, mergedTooltipConfig);
+    tooltipTriggerElement.addEventListener('show.bs.tooltip', () => {
+        visibleTooltips.push(tooltipTriggerElement);
+    });
+    tooltipTriggerElement.addEventListener('hide.bs.tooltip', () => {
+        let indexOf = visibleTooltips.indexOf(tooltipTriggerElement);
+        if (indexOf !== -1) {
+            visibleTooltips.splice(indexOf);
+        }
+    });
 }
 
-function exportGameData() {
-    var importExportBox = document.getElementById("importExportBox")
-    importExportBox.value = window.btoa(JSON.stringify(gameData))
+function initTooltips() {
+    const tooltipTriggerElements = document.querySelectorAll('[title], [data-bs-title]');
+    for (const tooltipTriggerElement of tooltipTriggerElements) {
+        initTooltip(tooltipTriggerElement, {});
+    }
 }
 
-//Init
+function initTabBehavior() {
+    if (tabButtons.hasOwnProperty(gameData.selectedTab)) {
+        setTab(gameData.selectedTab);
+    } else {
+        setTab('modules');
+    }
 
-createAllRows(jobCategories, "jobTable")
-createAllRows(skillCategories, "skillTable")
-createAllRows(itemCategories, "itemTable") 
+    Dom.get().byId('content').addEventListener('animationiteration', (event) => {
+        // Ignore bubbling events from children
+        if (event.target !== event.currentTarget) return;
 
-createData(gameData.taskData, jobBaseData)
-createData(gameData.taskData, skillBaseData)
-createData(gameData.itemData, itemBaseData) 
+        event.target.style.animationPlayState = 'paused';
+    });
 
-gameData.currentJob = gameData.taskData["Beggar"]
-gameData.currentSkill = gameData.taskData["Concentration"]
-gameData.currentProperty = gameData.itemData["Homeless"]
-gameData.currentMisc = []
+    Dom.get().bySelector('#settings .btn-close').addEventListener('click', (event) => {
+        event.preventDefault();
 
-gameData.requirements = {
-    //Other
-    "The Arcane Association": new TaskRequirement(getElementsByClass("The Arcane Association"), [{task: "Concentration", requirement: 200}, {task: "Meditation", requirement: 200}]),
-    "Dark magic": new EvilRequirement(getElementsByClass("Dark magic"), [{requirement: 1}]),
-    "Shop": new CoinRequirement([document.getElementById("shopTabButton")], [{requirement: gameData.itemData["Tent"].getExpense() * 50}]),
-    "Rebirth tab": new AgeRequirement([document.getElementById("rebirthTabButton")], [{requirement: 25}]),
-    "Rebirth note 1": new AgeRequirement([document.getElementById("rebirthNote1")], [{requirement: 45}]),
-    "Rebirth note 2": new AgeRequirement([document.getElementById("rebirthNote2")], [{requirement: 65}]),
-    "Rebirth note 3": new AgeRequirement([document.getElementById("rebirthNote3")], [{requirement: 200}]),
-    "Evil info": new EvilRequirement([document.getElementById("evilInfo")], [{requirement: 1}]),
-    "Time warping info": new TaskRequirement([document.getElementById("timeWarping")], [{task: "Mage", requirement: 10}]),
-    "Automation": new AgeRequirement([document.getElementById("automation")], [{requirement: 20}]),
-    "Quick task display": new AgeRequirement([document.getElementById("quickTaskDisplay")], [{requirement: 20}]),
-
-    //Common work
-    "Beggar": new TaskRequirement([getTaskElement("Beggar")], []),
-    "Farmer": new TaskRequirement([getTaskElement("Farmer")], [{task: "Beggar", requirement: 10}]),
-    "Fisherman": new TaskRequirement([getTaskElement("Fisherman")], [{task: "Farmer", requirement: 10}]),
-    "Miner": new TaskRequirement([getTaskElement("Miner")], [{task: "Strength", requirement: 10}, {task: "Fisherman", requirement: 10}]),
-    "Blacksmith": new TaskRequirement([getTaskElement("Blacksmith")], [{task: "Strength", requirement: 30}, {task: "Miner", requirement: 10}]),
-    "Merchant": new TaskRequirement([getTaskElement("Merchant")], [{task: "Bargaining", requirement: 50}, {task: "Blacksmith", requirement: 10}]),
-
-    //Military 
-    "Squire": new TaskRequirement([getTaskElement("Squire")], [{task: "Strength", requirement: 5}]),
-    "Footman": new TaskRequirement([getTaskElement("Footman")], [{task: "Strength", requirement: 20}, {task: "Squire", requirement: 10}]),
-    "Veteran footman": new TaskRequirement([getTaskElement("Veteran footman")], [{task: "Battle tactics", requirement: 40}, {task: "Footman", requirement: 10}]),
-    "Knight": new TaskRequirement([getTaskElement("Knight")], [{task: "Strength", requirement: 100}, {task: "Veteran footman", requirement: 10}]),
-    "Veteran knight": new TaskRequirement([getTaskElement("Veteran knight")], [{task: "Battle tactics", requirement: 150}, {task: "Knight", requirement: 10}]),
-    "Elite knight": new TaskRequirement([getTaskElement("Elite knight")], [{task: "Strength", requirement: 300}, {task: "Veteran knight", requirement: 10}]),
-    "Holy knight": new TaskRequirement([getTaskElement("Holy knight")], [{task: "Mana control", requirement: 500}, {task: "Elite knight", requirement: 10}]),
-    "Legendary knight": new TaskRequirement([getTaskElement("Legendary knight")], [{task: "Mana control", requirement: 1000}, {task: "Battle tactics", requirement: 1000}, {task: "Holy knight", requirement: 10}]),
-
-    //The Arcane Association
-    "Student": new TaskRequirement([getTaskElement("Student")], [{task: "Concentration", requirement: 200}, {task: "Meditation", requirement: 200}]),
-    "Apprentice mage": new TaskRequirement([getTaskElement("Apprentice mage")], [{task: "Mana control", requirement: 400}, {task: "Student", requirement: 10}]),
-    "Mage": new TaskRequirement([getTaskElement("Mage")], [{task: "Mana control", requirement: 700}, {task: "Apprentice mage", requirement: 10}]),
-    "Wizard": new TaskRequirement([getTaskElement("Wizard")], [{task: "Mana control", requirement: 1000}, {task: "Mage", requirement: 10}]),
-    "Master wizard": new TaskRequirement([getTaskElement("Master wizard")], [{task: "Mana control", requirement: 1500}, {task: "Wizard", requirement: 10}]),
-    "Chairman": new TaskRequirement([getTaskElement("Chairman")], [{task: "Mana control", requirement: 2000}, {task: "Master wizard", requirement: 10}]),
-
-    //Fundamentals
-    "Concentration": new TaskRequirement([getTaskElement("Concentration")], []),
-    "Productivity": new TaskRequirement([getTaskElement("Productivity")], [{task: "Concentration", requirement: 5}]),
-    "Bargaining": new TaskRequirement([getTaskElement("Bargaining")], [{task: "Concentration", requirement: 20}]),
-    "Meditation": new TaskRequirement([getTaskElement("Meditation")], [{task: "Concentration", requirement: 30}, {task: "Productivity", requirement: 20}]),
-
-    //Combat
-    "Strength": new TaskRequirement([getTaskElement("Strength")], []),
-    "Battle tactics": new TaskRequirement([getTaskElement("Battle tactics")], [{task: "Concentration", requirement: 20}]),
-    "Muscle memory": new TaskRequirement([getTaskElement("Muscle memory")], [{task: "Concentration", requirement: 30}, {task: "Strength", requirement: 30}]),
-
-    //Magic
-    "Mana control": new TaskRequirement([getTaskElement("Mana control")], [{task: "Concentration", requirement: 200}, {task: "Meditation", requirement: 200}]),
-    "Immortality": new TaskRequirement([getTaskElement("Immortality")], [{task: "Apprentice mage", requirement: 10}]),
-    "Time warping": new TaskRequirement([getTaskElement("Time warping")], [{task: "Mage", requirement: 10}]),
-    "Super immortality": new TaskRequirement([getTaskElement("Super immortality")], [{task: "Chairman", requirement: 1000}]),
-
-    //Dark magic
-    "Dark influence": new EvilRequirement([getTaskElement("Dark influence")], [{requirement: 1}]),
-    "Evil control": new EvilRequirement([getTaskElement("Evil control")], [{requirement: 1}]),
-    "Intimidation": new EvilRequirement([getTaskElement("Intimidation")], [{requirement: 1}]),
-    "Demon training": new EvilRequirement([getTaskElement("Demon training")], [{requirement: 25}]),
-    "Blood meditation": new EvilRequirement([getTaskElement("Blood meditation")], [{requirement: 75}]),
-    "Demon's wealth": new EvilRequirement([getTaskElement("Demon's wealth")], [{requirement: 500}]),
-
-    //Properties
-    "Homeless": new CoinRequirement([getItemElement("Homeless")], [{requirement: 0}]),
-    "Tent": new CoinRequirement([getItemElement("Tent")], [{requirement: 0}]),
-    "Wooden hut": new CoinRequirement([getItemElement("Wooden hut")], [{requirement: gameData.itemData["Wooden hut"].getExpense() * 100}]),
-    "Cottage": new CoinRequirement([getItemElement("Cottage")], [{requirement: gameData.itemData["Cottage"].getExpense() * 100}]),
-    "House": new CoinRequirement([getItemElement("House")], [{requirement: gameData.itemData["House"].getExpense() * 100}]),
-    "Large house": new CoinRequirement([getItemElement("Large house")], [{requirement: gameData.itemData["Large house"].getExpense() * 100}]),
-    "Small palace": new CoinRequirement([getItemElement("Small palace")], [{requirement: gameData.itemData["Small palace"].getExpense() * 100}]),
-    "Grand palace": new CoinRequirement([getItemElement("Grand palace")], [{requirement: gameData.itemData["Grand palace"].getExpense() * 100}]),
-
-    //Misc
-    "Book": new CoinRequirement([getItemElement("Book")], [{requirement: 0}]),
-    "Dumbbells": new CoinRequirement([getItemElement("Dumbbells")], [{requirement: gameData.itemData["Dumbbells"].getExpense() * 100}]),
-    "Personal squire": new CoinRequirement([getItemElement("Personal squire")], [{requirement: gameData.itemData["Personal squire"].getExpense() * 100}]),
-    "Steel longsword": new CoinRequirement([getItemElement("Steel longsword")], [{requirement: gameData.itemData["Steel longsword"].getExpense() * 100}]),
-    "Butler": new CoinRequirement([getItemElement("Butler")], [{requirement: gameData.itemData["Butler"].getExpense() * 100}]),
-    "Sapphire charm": new CoinRequirement([getItemElement("Sapphire charm")], [{requirement: gameData.itemData["Sapphire charm"].getExpense() * 100}]),
-    "Study desk": new CoinRequirement([getItemElement("Study desk")], [{requirement: gameData.itemData["Study desk"].getExpense() * 100}]),
-    "Library": new CoinRequirement([getItemElement("Library")], [{requirement: gameData.itemData["Library"].getExpense() * 100}]), 
+        setTab(previousSelectedTab);
+        gameData.transitionState(gameStates[gameData.previousStateName]);
+    });
 }
 
-tempData["requirements"] = {}
-for (key in gameData.requirements) {
-    var requirement = gameData.requirements[key]
-    tempData["requirements"][key] = requirement
+/**
+ * @param {string} newStationName
+ */
+function setStationName(newStationName) {
+    if (newStationName) {
+        gameData.stationName = newStationName;
+    } else {
+        gameData.stationName = emptyStationName;
+    }
+    Dom.get().byId('nameDisplay').textContent = gameData.stationName;
+    for (const stationNameInput of Dom.get().allByClass('stationNameInput')) {
+        stationNameInput.value = newStationName;
+    }
+    // saveGameData();
 }
 
-loadGameData()
+function initStationName() {
+    setStationName(gameData.stationName);
+    const stationNameDisplayElement = document.getElementById('nameDisplay');
+    stationNameDisplayElement.addEventListener('click', (event) => {
+        event.preventDefault();
 
-setCustomEffects()
-addMultipliers()
+        setTab('settings');
+        /** @var {HTMLInputElement} */
+        const settingsStationNameInput = Dom.get().byId('settingsStationNameInput');
+        settingsStationNameInput.focus();
+        settingsStationNameInput.select();
+    });
+    for (const stationNameInput of Dom.get().allByClass('stationNameInput')) {
+        stationNameInput.placeholder = emptyStationName;
+        stationNameInput.addEventListener('input', (event) => {
+            setStationName(event.target.value);
+        });
+    }
+}
 
-setTab(jobTabButton, "jobs")
+function initSettings() {
+    const background = gameData.settings.background;
+    if (isString(background)) {
+        setBackground(background);
+    }
 
-update()
-setInterval(update, 1000 / updateSpeed)
-setInterval(saveGameData, 3000)
-setInterval(setSkillWithLowestMaxXp, 1000)
+    if (isBoolean(gameData.settings.darkMode)) {
+        toggleLightDarkMode(gameData.settings.darkMode);
+    }
+    if (isBoolean(gameData.settings.sciFiMode)) {
+        toggleSciFiMode(gameData.settings.sciFiMode);
+    }
+    // gameData.settings.vfx.followProgressBars is applied in the VFX module itself - we just need to adjust the UI
+    Dom.get().byId('vfxProgressBarFollowSwitch').checked = gameData.settings.vfx.followProgressBars;
+}
+
+function displayLoaded() {
+    document.getElementById('main').classList.add('ready');
+}
+
+function assignNames(data) {
+    for (const [key, val] of Object.entries(data)) {
+        val.name = key;
+    }
+}
+
+function initConfigNames() {
+    assignNames(gameStates);
+    gridStrength.name = 'gridStrength';
+    assignNames(attributes);
+    assignNames(moduleCategories);
+    assignNames(modules);
+    assignNames(moduleComponents);
+    assignNames(moduleOperations);
+    assignNames(factions);
+    assignNames(battles);
+    assignNames(pointsOfInterest);
+    assignNames(sectors);
+    assignNames(galacticSecrets);
+}
+
+function init() {
+    initConfigNames();
+
+    gameData = new GameData();
+    /*
+     * During the setup a lot of functions are called that trigger an auto save.
+     * To not save various times, saving is skipped until the game is actually
+     * under player control.
+     */
+    gameData.skipSave = true;
+
+    gameData.tryLoading();
+
+    createLinkBehavior();
+    createModulesUI(moduleCategories, 'modulesTable');
+    createSectorsUI(sectors, 'sectorTable');
+    createBattlesUI(battles, 'battlesTable');
+    createGalacticSecretsUI(galacticSecrets, 'galacticSecrets');
+    createModulesQuickDisplay();
+    createBattlesQuickDisplay();
+
+    createAttributeDescriptions(createAttributeInlineHTML);
+    createAttributesDisplay();
+    createAttributesUI();
+    createEnergyGridDisplay();
+
+    initTabBehavior();
+    initTooltips();
+    initStationName();
+    initSettings();
+
+    cleanUpDom();
+
+    gameData.skipSave = false;
+    gameData.save();
+    displayLoaded();
+
+    update();
+    updateIntervalID = setInterval(update, 1000 / updateSpeed);
+    setInterval(gameData.save.bind(gameData), 3000);
+    requestAnimationFrame(updateLayout);
+}
+
+init();

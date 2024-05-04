@@ -1,0 +1,43 @@
+.secondary-stat {
+    font-size: 100%;
+}
+
+:is(.primary-stat, .secondary-stat) > data {
+    font-size: 1em;
+}
+
+#attributesDisplay {
+    .primary-stat {
+        font-size: large;
+
+        > .label {
+            font-weight: 300;
+        }
+
+        & > data {
+            display: block;
+        }
+    }
+}
+
+#attributes {
+    .table {
+        .title,
+        .formula {
+            white-space: nowrap;
+        }
+    }
+
+    .balance {
+        list-style: none;
+    }
+
+    .description {
+        line-height: 1.25rem;
+    }
+}
+
+#attributeRows .title {
+    font-family: var(--title-font-family);
+    font-weight: 400;
+}

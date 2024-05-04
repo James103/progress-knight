@@ -1,0 +1,267 @@
+a#gameTitle {
+    position: fixed;
+    left: 0;
+    top: 20%;
+
+    display: block;
+
+    rotate: 270deg;
+    transform-origin: left top;
+    transform: translateX(-100%);
+
+    color: inherit;
+    text-decoration: none;
+}
+
+.logo {
+    color: inherit;
+    text-decoration: none;
+
+    font-family: var(--title-font-family) !important;
+    font-weight: 400;
+    font-size: 3rem;
+
+    position: relative;
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0.125rem;
+        left: 0;
+        display: block;
+        border: 0.6rem solid var(--logo-border-color);
+        width: 100%;
+        aspect-ratio: 1/1;
+        border-radius: 50%;
+        z-index: -1;
+    }
+}
+
+#gameTitleLogo {
+    rotate: 90deg;
+}
+
+#stationOverviewLogo {
+    display: none;
+
+    position: absolute;
+    top: -7px;
+    left: 0;
+
+    font-size: 2.7rem;
+
+    z-index: 1; /* Keep the background-ring over the panel background */
+}
+
+#main {
+    max-width: var(--main-width);
+    opacity: 0;
+    margin: 0 auto;
+    transition: opacity 500ms ease-in-out;
+
+    &.ready {
+        opacity: 1;
+    }
+}
+
+/*
+ * No calc() supported in media queries - but this values is equivalent to
+ * calc(var(--main-width) + 2 * (4.5rem + 1rem))
+ */
+@media screen and (max-width: 1552px) {
+    #main {
+        margin: 0;
+        margin-left: 4.5rem; /* width of the game title */
+    }
+}
+
+/*
+ * Removing the game title at this break point frees up full width for #main
+ * Effectively: --main-width + 2 * body padding
+ */
+@media screen and (max-width: 1408px) {
+    #gameTitle {
+        display: none !important;
+    }
+
+    #stationOverviewLogo {
+        display: block;
+    }
+
+    #main {
+        margin-left: 0;
+    }
+
+    #nameDisplay {
+        margin-left: calc(65px + 1rem) !important;
+    }
+}
+
+#content {
+    position: relative;
+    max-width: var(--content-width);
+
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--active-color) 4px, var(--active-color) 8px);
+    background-repeat: repeat-y;
+    border-left: 3px solid var(--active-color);
+
+    animation: 600ms ease-in-out infinite pulse-background;
+    animation-play-state: paused;
+}
+
+@keyframes pulse-background {
+    0% {
+        background-size: 0 100%;
+    }
+    10%, 60% {
+        background-size: 24px 100%;
+    }
+    100% {
+        background-size: 0 100%;
+    }
+}
+
+.panel {
+    background-color: var(--panel-bg-color);
+}
+
+.tab {
+    min-height: 100%;
+}
+
+.label {
+    font-family: var(--title-font-family);
+    font-weight: 400;
+}
+
+.help-text {
+    color: var(--help-font-color);
+}
+
+.table td,
+.table th {
+    background: none;
+}
+
+data[data-unit]::after {
+    content: attr(data-unit);
+    font-family: var(--body-font-family);
+    font-size: var(--bs-body-font-size);
+    font-weight: var(--bs-body-font-weight);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.hiddenTask {
+    display: none !important;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.btn {
+    --bs-btn-disabled-color: var(--ps-passive);
+    --bs-btn-disabled-bg: var(--panel-bg-color-transparent05);
+    --bs-btn-disabled-border-color: var(--ps-passive);
+    --bs-btn-disabled-opacity: 1.0;
+
+    font-family: var(--title-font-family);
+    font-weight: 300;
+    border-radius: 0;
+    text-shadow: 1px 1px var(--ps-dark), 1px 1px 3px var(--ps-dark);
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--ps-dark-blue);
+    --bs-btn-hover-bg: var(--ps-blue);
+    --bs-btn-active-bg: var(--ps-blue);
+}
+
+.btn-secondary {
+    --bs-btn-bg: var(--panel-bg-color-transparent20);
+    --bs-btn-hover-bg: var(--ps-passive);
+    --bs-btn-active-bg: var(--ps-passive);
+}
+
+.btn-warning {
+    --bs-btn-color: var(--ps-light);
+    --bs-btn-bg: var(--ps-orange);
+    --bs-btn-hover-color: var(--ps-light);
+    --bs-btn-hover-bg: var(--ps-yellow);
+    --bs-btn-active-color: var(--ps-light);
+    --bs-btn-active-bg: var(--ps-yellow);;
+}
+
+.radio {
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    padding: 4px;
+}
+
+.radio > div {
+    width: 100%;
+    height: 100%;
+}
+
+.position-sticky {
+    background: inherit;
+}
+
+.icon {
+    height: 1.5rem;
+}
+
+a[target="_blank"]:after {
+    content: "";
+    display: inline-block;
+    vertical-align: -.125em;
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='rgb(128, 128, 128)' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5'/><path fill-rule='evenodd' d='M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z'/></svg>");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    width: 0.8em;
+    height: 0.8em;
+    margin-left: 0.2em;
+}
+
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+}
+
+.form-check {
+    cursor: pointer;
+
+    > * {
+        cursor: inherit;
+    }
+}
+
+.form-check-input:hover {
+    box-shadow: 0 0 0 0.25rem var(--active-color-subtle);
+}
+
+.rounded {
+    --bs-border-radius: var(--corner-length)
+}
+
+.rounded-top-end {
+    border-top-right-radius: var(--corner-length);
+}
+
+.rounded-top-start {
+    border-top-left-radius: var(--corner-length);
+}
+
+.rounded-bottom-end {
+    border-bottom-right-radius: var(--corner-length);
+}
+
+.rounded-bottom-start {
+    border-bottom-left-radius: var(--corner-length);
+}

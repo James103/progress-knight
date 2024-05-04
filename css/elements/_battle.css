@@ -1,0 +1,42 @@
+.battle > .progress-bar.current {
+    --progress-bar-color: var(--battle-color);
+}
+
+.game-playing {
+    .battle > .progress-bar-striped.current,
+    .battle.progress:hover > .progress-bar-striped {
+        animation: 1s linear infinite progress-bar-stripes;
+    }
+}
+
+#gameOverModal {
+    &.win {
+        .loss-only {
+            display: none;
+        }
+
+        .modal-content {
+            border: 3px solid cyan;
+        }
+
+        .modal-title,
+        .modal-body {
+            color: lightcyan;
+        }
+    }
+
+    &.loss {
+        .win-only {
+            display: none;
+        }
+
+        .modal-content {
+            border: 3px solid darkred;
+        }
+
+        .modal-title,
+        .modal-body {
+            color: lightcoral;
+        }
+    }
+}

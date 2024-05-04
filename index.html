@@ -1,302 +1,1038 @@
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="css/styles.css">
-    <link rel="stylesheet" type="text/css" href="css/dark.css">
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css"> 
-    <title>Progress Knight</title>
+
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+
+    <title>Progress Station</title>
 </head>
-<body id="body" class="dark">
-    <div class="w3-margin"> 
-        <h1>Progress Knight</h1>
-        <div style="width: 1220px; height: 600px"> 
-            <div class="panel w3-padding" style="width: 300px; height: auto; float: left">
-                <span id="deathText">
-                    <div style="font-size: large; color: red">Age has caught up to you</div>
-                    <div class="sidebar-element" style="color: gray">Your age has met your lifespan, use the amulet to rebirth before you pass away</div>
-                </span>
+<body id="body" class="sci-fi background-space">
+<section id="star-background" class="stars-active">
+    <div class="stars" id="stars1"></div>
+    <div class="stars" id="stars2"></div>
+    <div class="stars" id="stars3"></div>
+    <div class="stars" id="stars4"></div>
+    <div id="main-planet-wrapper">
+        <img id="main-planet" alt="Blue Planet Illustration" src="img/planets/planet07.svg">
+    </div>
+    <img id="moon" alt="Moon Illustration" src="img/planets/planet03.svg">
+    <img id="gas-planet" alt="Gas Planet Illustration" src="img/planets/planet12.svg">
+    <div id="main-planet-overlay"></div>
+</section>
 
-                <div class="" style="font-size: large">Age <span id="ageDisplay">14</span> Day <span id="dayDisplay">0</span></div>
-                <div class="sidebar-element" style="color: gray">Lifespan: <span id="lifespanDisplay">70</span> years</div>
-                
-                <button id="pauseButton" class="w3-button button sidebar-element" onClick="setPause()">Pause</button>
+<a id="gameTitle" class="d-flex panel align-items-center shortcut" href="#credits">
+    <div id="gameTitleLogo" class="logo me-2 order-2" >
+        PS
+    </div>
+    <h1 class="p-0 m-0 order-1">Progress Station</h1>
+</a>
+<main id="main" class="d-flex flex-column">
+    <header id="stationOverview" class="mb-3 gap-1 d-flex flex-column">
+        <div class="panel pe-3 pt-2 d-flex flex-row gap-3 align-items-start position-relative">
+            <a id="stationOverviewLogo" class="logo me-2" href="#credits">
+                PS
+            </a>
+            <h2 id="nameDisplay" class="shortcut my-0 me-auto px-3 pb-1">USS Progress</h2>
+            <div id="cyclesSinceLastEncounter" class="primary-stat"
+                 title="Intergalactic Cycles" data-bs-placement="bottom">
+                <span class="label">Since Last Encounter:</span>
+                <data value="14" data-unit="IC">14</data>
+            </div>
+            <div id="cyclesTotal" class="secondary-stat help-text"
+                 title="Intergalactic Cycles" data-bs-placement="bottom">
+                <span class="label">Date:</span>
+                <data value="70" data-unit="IC">0</data>
+            </div>
+        </div>
 
-                <span id="automation" class="inline" style="margin-left: 8px">
-                    <span>
-                        <div class="inline">Auto-promote</div>
-                        <input type="checkbox" class="inline" id="autoPromote">
-                    </span>
-                    </br>
-                    <span>
-                        <div class="inline">Auto-learn</div>
-                        <input type="checkbox" class="inline sidebar-element" id="autoLearn">
-                    </span>
-                </span>
+        <div id="energyGridDisplay" class="panel px-3 py-1 d-flex flex-row overflow-hidden">
+            <div class="d-flex flex-column mt-3">
+                <p id="gridLabel" class="grid-strength-bar energy-label d-flex align-items-center px-2"
+                     title="[Filled by JavaScript]" data-bs-placement="bottom" data-bs-html="true">
+                    <img src="img/icons/grid.svg" class="icon" alt="Grid Icon" style="height: 30px;" />
+                    <span class="flex-fill ms-1">Grid</span>
+                </p>
+                <p class="energy-bar energy-label d-flex align-items-center px-2">
+                    <img src="img/icons/energy.svg" class="icon" alt="Energy Icon"/>
+                    <span class="flex-fill ms-1">Energy</span>
+                </p>
+            </div>
 
-                <div style="font-size: large" id="coinDisplay">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
+            <div class="flex-fill">
+                <div class="ticks d-flex justify-content-between align-items-end">
+                    <template id="tickTemplate">
+                        <div class="tick"></div>
+                    </template>
+                    <slot id="ticksTop"></slot>
                 </div>
-                <div style="color: gray">Balance (in coins)</div>
 
-                <ul class="sidebar-element" style="padding-left: 20px;">
-                    <li><span style="color: rgb(9, 160, 230)">Net/day: </span ><b id="signDisplay"></b><span id="netDisplay">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </span></li>
-                    <li><span style="color: green">Income/day: </span><span id="incomeDisplay">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </span></li>
-                    <li><span style="color: red">Expense/day: </span><span id="expenseDisplay">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </span></li>
-                </ul>
+                <template id="gridStrengthBoxTemplate" class="keep">
+                    <div class="grid-strength-box flex-grow-1"></div>
+                </template>
+                <div id="gridStrength" class="grid-strength-bar position-relative d-flex flex-row" style="gap: 3px"
+                     title="[Filled by JavaScript]" data-bs-placement="bottom" data-bs-html="true">
+                    <!-- Maybe grey box left "Grid" + icon -->
+                    <p class="gridLoad position-absolute px-2" style="left: 0">
+                        <span>Load:</span>
+                        <data value="0">0</data>
+                    </p>
+                    <p class="gridStrength position-absolute px-2" style="right: 0">
+                        <span>Strength:</span>
+                        <data value="0">0</data>
+                    </p>
+                    <!-- grid-strength-boxes will be appended here -->
+                </div>
 
-                <span id="quickTaskDisplay">
-                    <div style="width: 230px" class="small-margin inline job progress-bar progressBar">
-                        <div class="progress-fill progressFill" style="background-color:rgb(225, 165, 0)"></div>
-                        <div class="progress-text name">Task</div>
+                <div id="energyDisplay" class="energy-bar progress progressBar" role="progressbar" aria-label="Energy"
+                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progressFill current progress-bar progress-bar-striped" style="width: 0"></div>
+                    <div class="progress-text energyGenerated px-2">
+                        <data value="0" data-unit="W">+0</data>
+                        <span>/cycle</span>
                     </div>
-                    <div class="sidebar-element" style="color: gray">Current job</div>
-
-                    <div style="width: 230px" class="small-margin skill progress-bar progressBar">
-                        <div class="progress-fill progressFill" style="background-color:rgb(225, 165, 0)"></div>
-                        <div class="progress-text name">Task</div>              
+                    <div class="progress-text energyLeft px-2 end-0">
+                        <data value="0" data-unit="W">+0</data>
+                        <span>until increase</span>
                     </div>
-                    <div class="sidebar-element" style="color: gray">Current skill</div>
-                </span>
+                </div>
 
-                <div style="font-size: large"><span style="color: rgb(15, 105, 207)">Happiness: </span><span id="happinessDisplay"></span></div>
-                <div style="color: gray" class="sidebar-element">Affects all xp gain</div>
+                <div class="ticks d-flex justify-content-between align-items-start">
+                    <slot id="ticksBottom"></slot>
+                </div>
+            </div>
+        </div>
 
-                <span id="evilInfo">
-                    <div style="font-size: large"><span style="color: rgb(200, 0, 0)">Evil: </span><span id="evilDisplay"></span></div>
-                    <div style="color: gray" class="sidebar-element">Affects dark magic xp gain</div>
-                </span>
+        <div id="attributesDisplay" class="shortcut panel px-3 py-1 d-flex justify-content-start gap-4" onclick="setTab('attributes');">
+            <div class="primary-stat" data-attribute="population"
+                 data-bs-placement="bottom" data-bs-html="true">
+                <img src="" class="icon" alt=""/>
+                <span class="label" style=""></span>
+                <div>
+                    <data id="populationDisplay" value="1">?</data>
+                    (x<data id="populationProgressSpeedDisplay" value="1">?</data>)
+                </div>
+            </div>
+            <div class="primary-stat" data-attribute="industry"
+                 data-bs-placement="bottom" data-bs-html="true">
+                <img src="" class="icon" alt=""/>
+                <span class="label" style=""></span>
+                <data id="industryDisplay" value="1">?</data>
+            </div>
+            <div class="primary-stat" data-attribute="research"
+                 data-bs-placement="bottom" data-bs-html="true">
+                <img src="" class="icon" alt=""/>
+                <span class="label" style=""></span>
+                <data id="researchDisplay" value="1">?</data>
+            </div>
+            <div class="primary-stat" data-attribute="growth"
+                 data-bs-placement="bottom" data-bs-html="true">
+                <img src="" class="icon" alt=""/>
+                <span class="label" style=""></span>
+                <data id="growthDisplay" value="1">?</data>
+            </div>
+            <div class="primary-stat" data-attribute="military"
+                 data-bs-placement="bottom" data-bs-html="true">
+                <img src="" class="icon" alt=""/>
+                <span class="label" style=""></span>
+                <data id="militaryDisplay" value="1">?</data>
+            </div>
+            <div class="primary-stat" data-attribute="danger"
+                 data-bs-placement="bottom" data-bs-html="true">
+                <img src="" class="icon" alt=""/>
+                <span class="label" style=""></span>
+                <data id="dangerDisplay" value="1">?</data>
+            </div>
+            <div class="primary-stat" data-attribute="heat"
+                 data-bs-placement="bottom" data-bs-html="true">
+                <img src="" class="icon" alt=""/>
+                <span class="label" style=""></span>
+                <data id="heatDisplay" value="1">?%</data>
+            </div>
+        </div>
+    </header>
 
-                <!--
-                <span id="scheduling">
-                    <div style="font-size: large">Scheduling</div>
-                    <div style="color: gray" class="sidebar-element">Schedule time to jobs/skills</div>
-                    <span style="height: 30px"> 
-                        <p style="width: 5px">Jobs</br>(32%)</p>
-                        <input id="schedulingSlider" class="slider" type="range" min="0" max="100" value="0">
-                        <p style="width: 5px">Skills</br>(68%)</p>
-                    </span>
-                </span>
-                -->
+    <div id="contentWrapper" class="d-flex align-content-start">
+        <aside id="sidebar" class="d-flex flex-column mh-100 overflow-x-hidden overflow-y-auto me-3">
+            <div id="actions" class="d-flex flex-column">
+                <button class="btn btn-lg w-100" id="pauseButton" onClick="togglePause();">
+                    Pause
+                </button>
+            </div>
+            <nav class="d-flex flex-column flex-fill mt-3 gap-1">
+                <button id="modulesTabButton" class="tabButton panel p-3" onClick="setTab('modules');">
+                    <!--suppress HtmlUnknownTag -->
+                    <h3>Modules</h3>
 
-                <span id="timeWarping">
-                    <div style="font-size: large"><span style="color: rgb(204, 34, 219)">Time warping: </span><span id="timeWarpingDisplay"></span></div>
-                    <div style="color: gray">Affects game speed</div>
-                    <button id="timeWarpingButton" class="w3-button button sidebar-element" style="margin-top: 5px; width:150px" onClick="setTimeWarping()">Enable warp</button>
-                </span>
+                    <template id="moduleQuickTaskDisplayTemplate">
+                        <div class="quickTaskDisplayContainer hidden">
+                            <h4 class="fs-6 text-start moduleName mb-0 mt-3 fw-light">Module</h4>
+                            <slot id="componentsQuickTaskDisplay"></slot>
+                        </div>
+                    </template>
+
+                    <template id="componentQuickTaskDisplayTemplate">
+                        <div class="quickTaskDisplay mt-2" title="Component: Operation" data-bs-placement="bottom">
+                            <div class="progress progressBar" role="progressbar" aria-label="Task" aria-valuenow="0"
+                                 aria-valuemin="0" aria-valuemax="100">
+                                <div class="operationQuickDisplay progressFill current progress-bar progress-bar-striped" style="width: 0"></div>
+                                <div class="progress-text name d-flex px-2">
+                                    <span class="component text-truncate">Component</span>
+                                    <span class="me-1">:</span>
+                                    <span class="operation text-truncate me-1">Operation</span>
+                                    <span class="me-1">lvl</span>
+                                    <data value="0" class="level">0</data>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <slot id="modulesQuickTaskDisplay"></slot>
+                </button>
+                <div id="battleTabButtonRequirements" class="p-3">
+                    <span class="help-text">Required: Defeated Astrogoblins level 12 / 25</span>
+                </div>
+                <button id="battleTabButton" class="tabButton panel p-3" onClick="setTab('battles');">
+                    <!--suppress HtmlUnknownTag -->
+                    <h3>Battle</h3>
+                    <template id="battleQuickTaskDisplayTemplate">
+                        <div class="quickTaskDisplay mt-2">
+                            <div class="progress battle progressBar" role="progressbar" aria-label="Task" aria-valuenow="0"
+                                 aria-valuemin="0" aria-valuemax="100">
+                                <div class="progressBackground progress-background"></div>
+                                <div class="battleQuickDisplay progressFill current progress-bar progress-bar-striped" style="width: 0"></div>
+                                <div class="progress-text d-flex px-2">
+                                    <span class="name text-truncate me-1">Battle</span>
+                                    <span class="levelLabel me-1">lvl</span>
+                                    <data value="0" class="level">0</data>
+                                    <span class="defeatedLabel">defeated!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <slot id="battlesQuickTaskDisplay"></slot>
+                </button>
+                <div id="locationTabButtonRequirements" class="p-3">
+                    <span class="help-text">Required: Defeated Astrogoblins level 12 / 25</span>
+                </div>
+                <button id="locationTabButton" class="tabButton panel p-3" onClick="setTab('location');">
+                    <!--suppress HtmlUnknownTag -->
+                    <h3>Location</h3>
+                    <!--suppress HtmlUnknownTag -->
+                    <div id="locationQuickDisplay" class="point-of-interest mt-2 w-100 px-2 d-flex"
+                            title="Sector: Point of Interest" data-bs-placement="bottom">
+                        <span class="sector text-truncate">Sector</span>
+                        <span class="me-1">:</span>
+                        <span class="pointOfInterest text-truncate">Point of Interest</span>
+                    </div>
+                </button>
+                <div id="attributesTabButtonRequirements" class="p-3">
+                    <span class="help-text">Required: Defeated Astrogoblins level 12 / 25</span>
+                </div>
+                <button id="attributesTabButton" class="tabButton panel p-3" onClick="setTab('attributes');">
+                    <!--suppress HtmlUnknownTag -->
+                    <h3>Attributes</h3>
+                </button>
+                <button id="galacticSecretsTabButton" class="tabButton panel p-3" onClick="setTab('galacticSecrets');">
+                    <!--suppress HtmlUnknownTag -->
+                    <h3>Galactic Secrets</h3>
+                    <!--suppress HtmlUnknownTag -->
+                    <div class="primary-stat d-flex justify-content-center mt-2" data-attribute="essenceOfUnknown"
+                         data-bs-placement="bottom" data-bs-html="true">
+                        <img src="" class="icon me-1" alt=""/>
+                        <span class="label" style=""></span>
+                        <span class="me-1">: </span>
+                        <data id="essenceOfUnknownDisplay" value="0">?</data>
+                    </div>
+                </button>
+
+                <button id="settingsTabButton" class="tabButton panel mt-auto p-3" onClick="setTab('settings');">
+                    <!--suppress HtmlUnknownTag -->
+                    <h3>Settings</h3>
+                </button>
+            </nav>
+        </aside>
+
+        <hr id="connector" />
+
+        <div id="content" class="panel flex-fill position-relative mh-100 overflow-auto">
+            <template id="level1Template">
+                <div class="level1">
+                    <div class="level1-header d-flex justify-content-start py-2 px-2 mb-0">
+                        <div class="category" title="Component Description" data-bs-placement="right">
+                            Industry
+                        </div>
+                    </div>
+
+                    <slot id="level2"></slot>
+                    <div class="ps-4">
+                        <slot id="level2Requirements"></slot>
+                    </div>
+                </div>
+            </template>
+
+            <template id="level2Template">
+                <div class="level2 ps-3 mt-2">
+                    <div class="level2-header text-bg-light d-flex justify-content-start align-items-center px-2 gap-3"
+                         style="padding-top: 5px; padding-bottom: 5px;">
+                        <div class="name" title="Component Description" data-bs-placement="right">
+                            Mining Bay
+                        </div>
+                        <div title="The sum of all operation levels in this module. Determines the max level after encountering the boss."
+                             data-bs-placement="top">
+                            Level:
+                            <data class="level" value="32">32</data>
+                        </div>
+                        <div>
+                            <div class="form-check form-switch form-check-reverse">
+                                <input class="form-check-input moduleActivationSwitch" type="checkbox" role="switch" id="switch1" checked>
+                                <label class="form-check-label moduleActivationLabel" for="switch1">Active</label>
+                            </div>
+                        </div>
+                        <div class="maxLevel" data-bs-placement="top">
+                            Max Level:
+                            <data value="124">124</data>
+                        </div>
+                        <div class="gridLoad ms-auto">
+                            Total grid load:
+                            <data value="3">3</data>
+                        </div>
+                    </div>
+
+                    <slot id="level3"></slot>
+                    <div class="ps-4">
+                        <slot id="level3Requirements"></slot>
+                    </div>
+                </div>
+            </template>
+
+            <template id="level3TaskTemplate">
+                <div class="table-container ps-3 mt-2">
+                    <table class="table mb-0">
+                        <thead class="level3">
+                        <tr class="header-row">
+                            <th class="name" title="Component Description" data-bs-placement="right">
+                                Drills
+                            </th>
+                            <th class="level numeric">Level</th>
+                            <th class="effect">Effect</th>
+                            <th class="xpGain numeric">Xp/Cycle</th>
+                            <th class="xpLeft numeric">Xp left</th>
+                            <th class="gridLoad numeric">Grid Load</th>
+                        </tr>
+                        </thead>
+                        <tbody class="level4">
+                            <!-- repeat level 4 row -->
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+
+            <template id="level4TaskTemplate">
+                <tr class="floating-warning-container">
+                    <td>
+                        <div class="progress progressBar descriptionTooltip clickable" role="progressbar" aria-label="Task"
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" title="Task Description"
+                             data-bs-placement="right">
+                            <div class="moduleOperation progressFill progress-bar progress-bar-striped" style="width: 54%"></div>
+                            <div class="progress-text name px-2 text-truncate">Basic Bitch Co. Drills</div>
+                        </div>
+                    </td>
+                    <td class="level numeric">
+                        <data value="53">53</data>
+                    </td>
+                    <td class="effect">
+                        x1.13 Industry
+                    </td>
+                    <td class="xpGain numeric">
+                        <data value="1600" data-unit="k">1.6</data>
+                    </td>
+                    <td class="xpLeft numeric">
+                        <data value="4550" data-unit="k">45.5</data>
+                    </td>
+                    <td class="gridLoad numeric">
+                        <data value="1">1</data>
+                        <div class="floating-warning m-2 p-2">
+                            Not enough Grid Strength!
+                        </div>
+                    </td>
+                </tr>
+            </template>
+
+            <template id="level3BattleTemplate">
+                <div class="table-container ps-3 mt-2">
+                    <table class="table mb-0">
+                        <thead class="level3">
+                        <tr class="header-row text-bg-light">
+                            <th class="name">Battles</th>
+                            <th class="level numeric">Level</th>
+                            <th class="xpGain numeric">Dmg</th>
+                            <th class="xpLeft numeric">HP left</th>
+                            <th class="danger numeric">Danger</th>
+                            <th class="rewards">Reward</th>
+                        </tr>
+                        </thead>
+                        <tbody class="level4">
+                        <!-- repeat level 4 row -->
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+
+            <template id="level4BattleTemplate">
+                <tr>
+                    <td>
+                        <div class="progress battle progressBar descriptionTooltip clickable" role="progressbar" aria-label="Task"
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" title="Learn something about astrogoblins."
+                             data-bs-placement="right">
+                            <div class="progressBackground progress-background"></div>
+                            <div class="battleProgress progressFill progress-bar progress-bar-striped" style="width: 54%"></div>
+                            <div class="progress-text name text-truncate px-2">Wimpy Astrogoblins</div>
+                        </div>
+                    </td>
+                    <td class="level numeric">
+                        <data value="53">53</data>
+                    </td>
+                    <td class="xpGain numeric">
+                        <data value="1600" data-unit="k">1.6</data>
+                    </td>
+                    <td class="xpLeft numeric">
+                        <data value="4550" data-unit="k">45.5</data>
+                    </td>
+                    <td class="danger numeric">
+                        <data value="200">200</data>
+                    </td>
+                    <td class="rewards">
+                        +2.0 Research
+                    </td>
+                </tr>
+            </template>
+
+            <template id="level3PointOfInterestTemplate">
+                <div class="table-container ps-3">
+                    <table class="table mb-0">
+                        <thead class="level3">
+                        <tr class="header-row text-bg-light">
+                            <th class="name" title="Sector Description" data-bs-placement="right">
+                                Sector
+                            </th>
+                            <th class="danger numeric">Danger</th>
+                            <th class="effect">Effect</th>
+                            <th class="modifier hidden">Modifier</th>
+                        </tr>
+                        </thead>
+                        <tbody class="level4">
+                        <!-- repeat level 4 row -->
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+
+            <template id="level4PointOfInterestTemplate">
+                <tr>
+                    <td style="width: 16rem">
+                        <button class="point-of-interest btn btn-primary btn-sm w-100 descriptionTooltip" aria-label="Item"
+                                title="Description" data-bs-placement="right">
+                            <span class="name"></span>
+                        </button>
+                    </td>
+                    <td class="danger numeric">
+                        <data value="200">200</data>
+                    </td>
+                    <td class="effect"></td>
+                    <td class="modifier hidden"></td>
+                </tr>
+            </template>
+
+            <template id="level4GalacticSecretTemplate">
+                <tr>
+                    <td>
+                        <div class="galactic-secret progress progressBar descriptionTooltip clickable" role="progressbar" aria-label="Task"
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" title="Task Description"
+                             data-bs-placement="right">
+                            <div class="moduleOperation progressFill progress-bar progress-bar-striped" style="width: 54%"></div>
+                            <div class="progress-text d-flex px-2">
+                                <span class="unlocked-icon me-1">🗹</span>
+                                <span class="component text-truncate">Component</span>
+                                <span class="me-1">:</span>
+                                <span class="operation text-truncate">Secret Operation</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="parent">
+                        Module
+                    </td>
+                    <td class="effect">
+                        x1.13 Industry, +4.50 Energy
+                    </td>
+                    <td class="gridLoad numeric">
+                        <data value="1">1</data>
+                    </td>
+                </tr>
+            </template>
+
+            <template id="level4RequiredTemplate">
+                <tr>
+                    <td class="requirements help-text ps-3" colspan="100%">
+                        Next unlock at:
+                        <span class="rendered"></span>
+                    </td>
+                </tr>
+            </template>
+
+            <template id="requirementsTemplate">
+                <div class="requirements help-text">
+                    Next unlock at:
+                    <span class="rendered"></span>
+                </div>
+            </template>
+
+            <div id="modules" class="tab p-3">
+                <slot id="modulesTable"></slot>
+                <slot id="moduleCategoryRequirements"></slot>
             </div>
 
-            <div class="panel w3-margin-left" style="width: 900px; height: 40px; float: left">
-                <div class="w3-button w3-bar-item tabButton" id="jobTabButton" onClick="setTab(this, 'jobs')">Jobs</div>
-                <div class="w3-button w3-bar-item tabButton" onClick="setTab(this, 'skills')">Skills</div>
-                <div class="w3-button w3-bar-item tabButton" id="shopTabButton" onClick="setTab(this, 'shop')">Shop</div>
-                <div class="w3-button w3-bar-item tabButton" id="rebirthTabButton" onClick="setTab(this, 'rebirth')">Amulet</div>
-                <div class="w3-button w3-bar-item tabButton" onClick="setTab(this, 'settings')" style="float: right">Settings</div>
-            </div>
-
-            <div class="panel w3-margin-left w3-margin-top w3-padding" style="width: 900px; height: auto; float: left">
-                <template class="headerRowTaskTemplate">
-                    <tr>
-                        <th class="category" style="width: 250px">Job</th>
-                        <th>Level</th>
-                        <th class="valueType">Value type</th>
-                        <th>Xp/day</th>
-                        <th>Xp left</th>
-                        <th class="maxLevel">Max level</th>
-                        <th class="skipSkill">Skip</th>
-                    </tr>
-                </template>
-
-                <template class="headerRowItemTemplate">
-                    <tr>
-                        <th class="category" style="width: 250px">Item</th>
-                        <th style="width: 100px">Active</th>
-                        <th style="width: 250px">Effect</th>
-                        <th>Expense/day</th>
-                    </tr>
-                </template>
-
-                <template class="rowTaskTemplate">
-                    <tr>
-                        <td>
-                            <div class="progress-bar progressBar tooltip">
-                                <div class="progress-fill progressFill"></div>
-                                <div class="progress-text name">Task</div>
-                                <span class="tooltipText"></span>
-                            </div>
-                        </td>
-                        <td class="level">Level</td>
-                        <td class="value">
-                            <div class="effect"></div>
-                            <div class="income">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                        </td>
-                        <td class="xpGain">Xp/day</td>
-                        <td class="xpLeft">Xp left</td>
-                        <td class="maxLevel">Max level</td>
-                        <td class="skipSkill">
-                            <input class="checkbox" type="checkbox"></input>
-                        </td>
-                    </tr>
-                </template>
-
-                <template class="rowItemTemplate">
-                    <tr>
-                        <td>
-                            
-                            <button class="button item-button tooltip">
-                                <span class="name"></span>
-                                <span class="tooltipText">tooltip</span>
-                            </button>
-                            
-                        </td>
-                        <td>
-                            <div class="w3-border w3-circle" style="width: 40px; height: 40px; padding: 7px">
-                                <div class="active w3-circle" style="width: 24px; height: 24px;"></div>
-                            </div>
-                        </td>
-                        <td class="effect"></td>
-                        <td class="expense">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </td>
-                    </tr>
-                </template>
-
-                <template class="requiredRowTemplate">
-                    <td class="w3-text-gray" style="padding-left: 16px" colspan=5>
-                        Required: 
-                        <span class="value" colspan=5>
-                            <span class="levels"></span>
-                            <span class="coins">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </span>
-                            <span style="color: rgb(200, 0, 0)" class="evil"></span>
+            <div id="battles" class="tab p-3 overflow-hidden">
+                <ul class="tab-help-text help-text m-0">
+                    <li class="battles-pose-danger">
+                        Engaged battles pose a
+                        <span class="primary-stat" data-attribute="danger" data-attribute-tooltip="false">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
                         </span>
-                    </td> 
-                </template>
+                        that will reduce your population if your
+                        <span class="primary-stat" data-attribute="military" data-attribute-tooltip="false">
+                            <img src="" class="icon" alt=""/>
+                            <span class="label"></span>
+                        </span>
+                        is not high enough.
+                    </li>
+                    <li class="battles-pose-danger">Disengage battles by clicking them again.</li>
+                    <li class="multiple-battles">Engage as many battles as you like.</li>
+                </ul>
+                <slot id="battlesTable"></slot>
+            </div>
 
-                <div class="tab" id="jobs">
-                    <table id="jobTable" class="w3-table w3-bordered">
+            <div id="location" class="tab p-3">
+                <slot id="sectorTable"></slot>
+                <slot id="sectorRequirements"></slot>
+            </div>
+
+            <div id="attributes" class="tab p-3">
+                <!-- TODO: boxed design for mobile -> be able to have 1 attribute per row -->
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th class="text-nowrap name">Attribute</th>
+                            <th class="text-nowrap value numeric">Value</th>
+                            <th class="text-nowrap breakdown">Breakdown</th>
+                            <th class="text-nowrap description">Description</th>
+                        </tr>
+                        </thead>
+                        <template id="attributeRowTemplate">
+                            <tr>
+                                <td class="title">
+                                    <img src="img/icons/industry.svg" class="icon" alt="Population Icon"/>
+                                    <span class="name">Industry</span>
+                                </td>
+                                <td class="value numeric">
+                                    <data value="0">?</data>
+                                </td>
+                                <td class="breakdown"
+                                    style="line-height: 1.1rem; padding-top: 0.3rem; padding-bottom: 0.3rem;">
+                                    <ul class="balance hidden m-0 list-unstyled">
+                                        <!-- Repeat balanceEntry -->
+                                    </ul>
+
+                                    <p class="formula hidden">
+                                    </p>
+                                </td>
+                                <td class="description"></td>
+                            </tr>
+                        </template>
+                        <template id="balanceEntryTemplate">
+                            <li class="balanceEntry">
+                                <span class="operator"></span>
+                                <data value="0" class="entryValue">?</data>
+                                <span class="name"></span>
+                            </li>
+                        </template>
+                        <tbody id="attributeRows">
+                        </tbody>
                     </table>
                 </div>
+            </div>
 
-                <div class="tab" id="skills">
-                    <table id="skillTable" class="w3-table w3-bordered">
+            <div id="galacticSecrets" class="tab p-3">
+                <ul class="tab-help-text help-text m-0">
+                    <li>Unravel a Galactic Secret by long pressing its progress bar.</li>
+                    <li style="transform-origin: left">Each Secret costs
+                        <data id="galacticSecretCostDisplay" value="1" class="text-body">1</data>
+                        <span class="primary-stat" data-attribute="essenceOfUnknown" data-attribute-tooltip="false">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>
+                        currently.
+                    </li>
+                    <li>After unraveling a Secret, the cost per Secret will increase <data value="3" class="text-body">x3</data>.</li>
+                </ul>
+                <div class="table-container ps-3">
+                    <table class="table mb-0">
+                        <thead class="level3">
+                        <tr class="header-row">
+                            <th class="name">
+                                Galactic Secret
+                            </th>
+                            <th class="parent">Belongs to</th>
+                            <th class="effect">Effect</th>
+                            <th class="gridLoad numeric">Grid Load</th>
+                        </tr>
+                        </thead>
+                        <tbody class="level4">
+                        <!-- repeat level4GalacticSecretTemplate -->
+                        </tbody>
                     </table>
                 </div>
+            </div>
 
-                <div class="tab" id="shop">
-                    <table id="itemTable" class="w3-table w3-bordered">
-                    </table>
+            <div id="settings" class="tab p-3">
+                <div class="d-flex align-items-start">
+                    <h3>Settings</h3>
+                    <button type="button" class="btn-close ms-auto" aria-label="Close"></button>
+                </div>
+                <div class="row">
+                    <label for="settingsStationNameInput" class="col-sm-2 col-form-label">Station Name</label>
+                    <div class="col-sm-10">
+                        <input type="text"
+                               id="settingsStationNameInput"
+                               class="stationNameInput form-control"
+                               maxlength="30"
+                               placeholder=""/>
+                        <div class="d-flex mt-2 gap-2 justify-content-end">
+                            <button class="btn btn-dark" onClick="rerollStationName();">Re-roll</button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="tab" id="rebirth">
-                    <ul>
-                        <li style="margin: 8px;">
-                            You stumble across a strange looking amulet on your 25th birthday. It does not look like
-                            it has any worth on the market given that it's made from cheap-looking copper. However, you
-                            feel a weird urge to keep the amulet, so you slip it into your pocket for safekeeping.
-                        </li>
-                        <li style="margin: 8px;" id="rebirthNote1">
-                            On your 45th birthday, you feel the amulet shiver uncontrollably in your pocket. You take it
-                            out and the constant shivering suddenly stops. More to your bizarre surprise, you notice
-                            a strange etching on the centre of the amulet.
-                        </li>
-                        <li style="margin: 8px;" id="rebirthNote2">
-                            <div style="margin-bottom: 8px">
-                                On your 65th birthday, you once again encounter the strange, unexplained shivering from your
-                                amulet. But this time, a living eyeball emerges from the centre. Although terribly frightened,
-                                you realise you do not have many years to live left anyway so you consider touching the eye
-                                to see what happens.
-                            </div>
-                            <i style="color: grey">
-                                By touching the eyeball, you will be reborn and have to restart life again, losing all your levels and coins.
-                                However, you will gain <b>xp multipliers</b> for your jobs and skills equivalent to: <b>1 + the max level of the skill or job / 10.</b>
-                                This means you will learn everything again much more quickly than you did in your previous life. <span style="color: rgb(200, 0, 0)">
-                                Something tells you that the amulet might transform even further after living for <b>2 whole centuries</b>...</span>
-                            </i>
-                            </br>
-                            <button class="w3-button button" style="margin-bottom: 8px; margin-top: 8px" onClick="rebirthOne()">Touch the eye</button>
-                            </br>
-                        </li>
-                        <li style="margin: 8px;" id="rebirthNote3">
-                            <div style="margin-bottom: 8px;">
-                                Your gut instinct was right. The moment you hit the grand age of 200, you hear an ominous hum coming from the amulet.
-                                A mouth emerges from its surface and begins to cackle, and proceeds to say: "So you've made it this far... Are you ready to embrace evil?"
-                            </div>
-                            <i style="color: rgb(200, 0, 0)">
-                                If you decide to embrace evil, all of your levels, coins and even max levels will be reset.
-                                You will be reborn as a fresh slate. However, you will unlock a new line of skills and gain
-                                <b><span id="evilGainDisplay"></span> evil</b>, which will heavily impact your future lives.
-                            </i>
-                            </br>
-                                <button class="w3-button button" style="margin-bottom: 8px; margin-top: 8px" onClick="rebirthTwo()">Embrace evil</button>
-                            </br>
-                        </li>
-                    </ul>
+                <div class="row mt-3">
+                    <label for="importExportBox" class="col-sm-2 col-form-label">Import/export save</label>
+                    <div class="col-sm-10">
+                        <textarea id="importExportBox" class="form-control" rows="3"></textarea>
+
+                        <div class="d-flex mt-2 gap-2 justify-content-end">
+                            <button class="btn btn-dark" onClick="gameData.import();">Import</button>
+                            <button class="btn btn-dark" onClick="gameData.export();">Export</button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="tab" id="settings">
-                    <ul>
-                        <li>
-                            <h2>Import/export save</h2>
-                            <button class="w3-button button" onClick="importGameData()">Import</button>
-                            <button class="w3-button button" onClick="exportGameData()">Export</button>
-                            <form style="margin-top: 16px"> 
-                                <input id="importExportBox" type="text" style="width:300px; height:30px"></input>
-                            </form>
-                        </li>
-                        <li>
-                            <h2>Toggle light/dark mode</h2>
-                            <button class="w3-button button" onClick="setLightDarkMode()">Toggle</button>
-                        </li>
-                        <li>
-                            <h2>Join the discord community!</h2>
-                            <a href="https://discord.gg/fTRS4pHGka" target="_blank">
-                                <img src="https://cdn.icon-icons.com/icons2/2108/PNG/512/discord_icon_130958.png" width="100" height="100"></img>
-                            </a>
-                        </li>
-                        <li>
-                            <h2>Hard reset game</h2>
-                            <button class="w3-button button w3-red" onClick="resetGameData()">Reset</button>
-                        </li>
-                    </ul>
+                <div class="row mt-3">
+                    <div class="col-sm-2">Performance</div>
+                    <div class="col-sm-10">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox"
+                                   role="switch" id="vfxProgressBarFollowSwitch"
+                                    onclick="toggleVfxFollowProgressBars();">
+                            <label class="form-check-label" for="vfxProgressBarFollowSwitch">
+                                Particles on progress bars
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3 hidden">
+                    <div class="col-sm-2 col-form-label">Light/dark mode</div>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <button class="btn btn-light py-1" onClick="toggleLightDarkMode(false);">Light</button>
+                            <button class="btn btn-dark py-1" onClick="toggleLightDarkMode(true);">Dark</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3 hidden">
+                    <div class="col-sm-2 col-form-label unstable">Sci-fi mode</div>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <button class="btn btn-light py-1" onClick="toggleSciFiMode(true);">On</button>
+                            <button class="btn btn-primary py-1" onClick="toggleSciFiMode(false);">Off</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3 hidden">
+                    <div class="col-sm-2 col-form-label unstable">Background</div>
+                    <div class="col-sm-10">
+                        <div class="form-check background background-simple" onclick="setBackground('simple');">
+                            <input class="form-check-input" type="radio" name="background" id="radioBackground1">
+                            <label class="form-check-label" for="radioBackground1">
+                                Simple Color
+                            </label>
+                        </div>
+                        <div class="form-check background background-triangles1" onClick="setBackground('triangles1');">
+                            <input class="form-check-input" type="radio" name="background" id="radioBackground2">
+                            <label class="form-check-label" for="radioBackground2">
+                                Trianglify
+                            </label>
+                        </div>
+                        <div class="form-check background background-space" onClick="setBackground('space');">
+                            <input class="form-check-input" type="radio" name="background" id="radioBackground3">
+                            <label class="form-check-label" for="radioBackground3">
+                                Space
+                            </label>
+                        </div>
+                        <div class="form-check background background-hexagons" onClick="setBackground('hexagons');">
+                            <input class="form-check-input" type="radio" name="background" id="radioBackground4">
+                            <label class="form-check-label" for="radioBackground4">
+                                Bestagons
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div id="credits" class="col-sm-2 col-form-label">Credits</div>
+                    <div class="col-sm-10" style="padding-top: 10px">
+                        <h5>Team</h5>
+                        <p>
+                            A game by <a href="http://kringel.games/" target="_blank">Kringel Games</a>.
+                        </p>
+
+                        <div class="table-container">
+                            <table class="table table-borderless table-striped align-middle w-auto">
+                                <tbody>
+                                <tr>
+                                    <th class="ps-0">Vision Keeper &amp; Visual Coder</th>
+                                    <td>Raoul</td>
+                                </tr>
+                                <tr>
+                                    <th class="ps-0">Feature Coder</th>
+                                    <td>Mark</td>
+                                </tr>
+                                <tr>
+                                    <th class="ps-0">Initial Vision</th>
+                                    <td>Janik</td>
+                                </tr>
+                                <tr>
+                                    <th class="ps-0">Dev Ops</th>
+                                    <td>Pauline</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h5>Origin</h5>
+                        <p class="mb-3">
+                            Based on the captivating <a href="https://ihtasham-42.itch.io/progress-knight" target="_blank">Progress Knight</a>
+                            (<a href="https://github.com/ihtasham42/progress-knight" target="_blank">source</a>)
+                            by <b>Ihtasham 42</b>. Check it out!
+                        </p>
+
+                        <h5>3rd Party Assets</h5>
+                        <ul>
+                            <li>
+                                Fonts
+                                <ul>
+                                    <li>
+                                        <a href="https://typodermicfonts.com/syndra/">Syndra</a>
+                                        by <a href="https://typodermicfonts.com/">Raymond Larabie</a>
+                                    </li>
+                                    <li>
+                                        <a href="https://fonts.google.com/specimen/Exo+2">Exo 2</a>
+                                        by <a href="https://ndiscover.com/">Natanael Gama</a>
+                                    </li>
+                                    <li>
+                                        <a href="https://www.behance.net/gallery/77648235/Typori-Font">Typori</a>
+                                        by <a href="https://www.behance.net/erikyin">Tzu-yuan Yin</a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li>
+                                JavaScript Libraries
+                                <ul>
+                                    <li><a href="https://getbootstrap.com/" target="_blank">Bootstrap 5</a></li>
+                                    <li>
+                                        <a href="https://github.com/wilsonpage/fastdom" target="_blank">Fastdom</a>
+                                        by <a href="https://github.com/wilsonpage" target="_blank">Wilson Page</a>
+                                    </li>
+                                    <li>
+                                        <a href="https://github.com/turuslan/HackTimer" target="_blank">HackTimer</a>
+                                        by <a href="https://github.com/turuslan" target="_blank">Ruslan Tushov</a>
+                                    </li>
+                                    <li><a href="https://lodash.com/" target="_blank">Lodash</a></li>
+                                </ul>
+                            </li>
+                            <li>
+                                Images
+                                <ul>
+                                    <li>
+                                        <a href="https://www.freepik.com/free-vector/fantastic-planets-cartoon-galaxy-ui-game-asteroids_8188953.htm#">Images by upklyak</a> on Freepik
+                                        <div>
+                                            <img src="img/planets/planet07.svg" width="70" />
+                                            <img src="img/planets/planet03.svg" width="70" />
+                                            <img src="img/planets/planet12.svg" width="70" />
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-sm-2 col-form-label">Hard reset game</div>
+                    <div class="col-sm-10">
+                        <button class="btn btn-danger py-1" onClick="gameData.reset();">Reset</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</body>
+</main>
 
-<script type="text/javascript" src="js/HackTimer.js"></script>
+<div id="storyIntroModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-4 fw-light">Welcome to Progress Station</h2>
+            </div>
+            <div class="modal-body">
+                <p>You awake on a dimly lit, emergency-powered bridge of what appears
+                    to be a heavily damaged space station.
+                <p>
+                <p>
+                    Through the glazed front you see not only large parts of the station
+                    as they drift away destroyed through space, but also a many-limbed,
+                    dark mass that disappears silently into the vastness of space.
+                    At least for now.
+                <p>
+                <p>
+                    <label for="introStationNameInput">A name flashes on the main console:</label>
+                </p>
+                <input type="text"
+                       id="introStationNameInput"
+                       class="stationNameInput w-100"
+                       maxlength="30"
+                       placeholder=""/>
+            </div>
+            <div class="modal-footer d-flex">
+                <button type="button" id="rerollName" class="btn btn-secondary">Re-roll name</button>
+                <button type="button" class="btn btn-primary ms-auto" onclick="finishIntro();">Take control</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="bossAppearanceModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-4 fw-light">An ancient evil approaches</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Everything was going great on your space station, but suddenly your
+                    heart sinks into your stomach, and you get that same feeling as when
+                    you came to your senses alone on this very station.
+                </p>
+                <p>
+                    Sensors are going wild, the proximity alert shrieks and the light of stars
+                    gets swallowed by an unidentifiable mass.
+                </p>
+                <p class="help-text">
+                    In <data value="4">4</data> battles or <data value="800">800</data> cycles
+                    (whichever happens first) the boss battle will start.
+                </p>
+            </div>
+            <div class="modal-footer d-flex">
+                <button type="button" class="btn btn-primary ms-auto" onclick="acknowledgeBossBattle();">Prepare!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="bossFightIntroModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-4 fw-light"><b class="bossName">The Destroyer</b> attacks you</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    You are facing an immense, dark mass of writhing tentacles, teeth and eyes that are fixated on the station.
+                </p>
+                <p>
+                    The vacuum of space around your station suppresses all noise, but you can feel the hatred of
+                    the alien beast and see it's determination to destroy everything you have built up.
+                </p>
+                <ul class="help-text m-0">
+                    <li>Your damage output is multiplied by your
+                        <span class="primary-stat" data-attribute="military" data-bs-html="true">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>
+                        and the progress speed from
+                        <span class="primary-stat" data-attribute="population" data-bs-html="true">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>.
+                    </li>
+                    <li>The boss inflicts
+                        <span class="primary-stat" data-attribute="heat" data-bs-html="true">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>
+                        and is directly damaging your
+                        <span class="primary-stat" data-attribute="population" data-bs-html="true">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>.
+                    </li>
+                    <li><span class="primary-stat" data-attribute="growth" data-bs-html="true">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>
+                        is disabled during the boss battle.
+                    </li>
+                    <li>Once your
+                        <span class="primary-stat" data-attribute="population" data-bs-html="true">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>
+                        reaches <data value="0">0</data>,
+                        you <b>lose the battle</b>.
+                    </li>
+                    <li>The boss has <data class="bossTargetLevel" value="10">10</data> levels of defense.</li>
+                    <li>The more levels of the boss that you overcome, the more
+                        <span class="primary-stat" data-attribute="essenceOfUnknown" data-bs-html="true">
+                            <img src="" class="icon" alt="" />
+                            <span class="label"></span>
+                        </span>
+                        you will collect.
+                    </li>
+                    <li>Overcoming the last level of the boss will <b>win you the game</b>.</li>
+                </ul>
+            </div>
+            <div class="modal-footer d-flex">
+                <button type="button" class="btn btn-secondary"
+                        id="delayBossBattleButton" onclick="delayBossBattle();">
+                    Not yet
+                </button>
+                <button type="button" class="btn btn-primary ms-auto" onclick="startBossBattle();">Fight!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="gameOverModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-4 fw-light win-only">You defeated <b class="bossName">The Destroyer!</b></h2>
+                <h2 class="modal-title fs-4 fw-light loss-only"><b class="bossName">The Destroyer</b> defeated you!</h2>
+            </div>
+            <div class="modal-body win-only">
+                <p>
+                    Congratulations!
+                </p>
+                <p>
+                    You managed to blast through <b class="bossName">the Destroyer</b>'s near endless defenses.
+                </p>
+                <p>
+                    The universe is safe, and it feels as if a curse was lifted of your soul.
+                </p>
+                <p class="mt-4">
+                    On the main console you see what appears to be an ancient video game:
+                </p>
+                <p class="text-center">
+                    <a href="https://ihtasham-42.itch.io/progress-knight">Progress Knight</a> by ihtasham_42<br/>
+                </p>
+                <p class="help-text">
+                    Check out the original game that Progress Station is based upon.
+                </p>
+            </div>
+            <div class="modal-body loss-only">
+                <p>
+                    <b class="bossName">The Destroyer</b>'s power is overwhelming and annihilates your crew, your station, everything.
+                </p>
+                <p>
+                    With the last of your strength, you save yourself in the rescue capsule.
+                </p>
+                <ul class="help-text m-0">
+                    <li>In the next play-through, you will progress much faster.</li>
+                    <li>Each operation in a module progresses <data value="X" data-unit="%">X</data> faster,
+                        where <data value="X">X</data> is the module's max level.</li>
+                    <li>Max level of modules = sum of that module's operations max level.</li>
+                </ul>
+            </div>
+            <div class="modal-footer d-flex">
+                <button type="button" class="btn btn-secondary win-only" onclick="continueAfterWin();">Keep playing</button>
+                <button type="button" class="btn btn-primary ms-auto win-only" onclick="resetAfterWin();">Start new game</button>
+                <button type="button" class="btn btn-primary ms-auto loss-only" onclick="restartAfterDead();">Fade to black</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Needs to be the last of all modals, as it's supposed to overlap any other open modals -->
+<!-- Not really elegant, but it's just an intermediate solution until with have game save migrations -->
+<div id="versionWarningModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-4 fw-light">Incompatible Save Game found</h2>
+            </div>
+            <div class="modal-body">
+                <p>You have already played <b>Progress Station</b> in the past, thank you!</p>
+                <p>The game has evolved a lot since then and we can not guarantee that your save game is still fully compatible.</p>
+                <p>Our recommendation is to start with a fresh game. But you can also try and let the game reuse your save file.</p>
+            </div>
+            <div class="modal-footer d-flex">
+                <div>
+                    <button type="button" class="btn btn-warning" onclick="continueWithIncompatibleVersion();">
+                        Keep save
+                    </button>
+                    <p><small>(might break the game)</small></p>
+                </div>
+                <div class="ms-auto">
+                    <button type="button" class="btn btn-primary" onclick="gameData.reset();">
+                        Reset game
+                    </button>
+                    <p><small>(deletes all progress)</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="vendor/fastdom-1.0.11/fastdom.min.js"></script>
+<script type="text/javascript" src="vendor/fastdom-1.0.11/extensions/fastdom-promised.js"></script>
+<script type="text/javascript">
+    // extend fastdom
+    const XFastdom = fastdom.extend(fastdomPromised);
+</script>
+<script type="text/javascript" src="vendor/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="vendor/lodash-4.17.15/lodash.min.js"></script>
+<script type="text/javascript" src="js/utils.js"></script>
+<script type="text/javascript" src="js/gameUtils.js"></script>
+<script type="text/javascript" src="js/gameEvents.js"></script>
+<script type="text/javascript" src="js/nameGenerator.dictionary.lighthearted.js"></script>
+<script type="text/javascript" src="js/nameGenerator.js"></script>
+<script type="text/javascript" src="js/cheats.js"></script>
+<script type="text/javascript" src="js/effects.js"></script>
 <script type="text/javascript" src="js/classes.js"></script>
+<script type="text/javascript" src="js/battle.js"></script>
+<script type="text/javascript" src="js/game-config/general.js"></script>
+<script type="text/javascript" src="js/game-config/attributes.js"></script>
+<script type="text/javascript" src="js/game-config/modules.js"></script>
+<script type="text/javascript" src="js/game-config/battles.js"></script>
+<script type="text/javascript" src="js/game-config/locations.js"></script>
+<script type="text/javascript" src="js/game-config/galactic-secrets.js"></script>
+<script type="text/javascript" src="js/game-config/requirements.js"></script>
+<script type="text/javascript" src="js/story.js"></script>
+<script type="text/javascript" src="js/gameData.js"></script>
 <script type="text/javascript" src="js/main.js"></script>
-
+<script type="text/javascript" src="js/vfx.js"></script>
+</body>
 </html>
